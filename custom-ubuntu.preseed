@@ -1,0 +1,53 @@
+# https://help.ubuntu.com/14.04/installation-guide/example-preseed.txt
+
+d-i debian-installer/locale string en_US
+
+# Keyboard selection.
+# Disable automatic (interactive) keymap detection.
+#d-i console-setup/ask_detect boolean false
+#d-i keyboard-configuration/layoutcode string us
+
+d-i netcfg/choose_interface select eth0
+d-i netcfg/wireless_wep string
+
+d-i time/zone string US/Eastern
+d-i clock-setup/ntp boolean true
+
+# Auto-confirm all disk settings
+d-i partman/choose_partition select finish
+d-i partman/confirm boolean true
+d-i partman/confirm_nooverwrite boolean true
+d-i partman/default_filesystem string ext4
+d-i partman-auto/init_automatically_partition select biggest_free
+d-i partman-auto/choose_recipe select atomic
+d-i partman-auto/method string regular
+d-i partman-auto/select_disk string /dev/vda
+d-i partman-md/confirm boolean true
+d-i partman-partitioning/confirm_write_new_label boolean true
+
+d-i passwd/root-login boolean true
+d-i passwd/root-password-crypted password $1$BwUlZhpp$f86V1L3xhyxpaoZs36Z2N/
+d-i passwd/make-user boolean false
+
+d-i mirror/http/countries select US
+d-i mirror/http/hostname string archive.ubuntu.com
+d-i mirror/http/directory string /debian
+d-i mirror/http/mirror select us.archive.ubuntu.com
+d-i mirror/protocol select http
+d-i mirror/country string US
+d-i mirror/http/proxy string
+
+d-i pkgsel/include string openssh-server irssi
+d-i pkgsel/upgrade select full-upgrade
+d-i pkgsel/update-policy select none
+
+tasksel tasksel/first multiselect basic-ubuntu-server
+
+d-i clock-setup/utc boolean true
+
+d-i grub-installer/only_debian boolean true
+d-i grub-installer/timeout string 2
+d-i finish-install/keep-consoles boolean true
+d-i finish-install/reboot_in_progress note 
+
+d-i preseed/late_command string in-target sed -i '/^PermitRootLogin/c PermitRootLogin yes' /etc/ssh/sshd_config
