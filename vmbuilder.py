@@ -1,12 +1,11 @@
 #!/usr/bin/env python
-
 import argparse
 import libvirt
 import logging
 import subprocess
 import sys
 
-import ubuntu
+import vmtypes
 
 # TODO: Config file for defaults/assumptions?
 # Figure out better way to not run virsh commands? all libvirt api? how does dry run work?
@@ -19,33 +18,55 @@ class VMBuilder(object):
 
     def __init__(self):
         self.args = self.parseArgs()
-        self.conn = self.getConn()
+        self.configureLogging()
+        self.conn = None
         self.build = None
-        self.flags = None
+        self.flags = {}
+
+    def configureLogging(self):
+        if self.args.debug:
+            log_level = logging.DEBUG
+        else:
+            log_level = logging.INFO
+
+        logging.basicConfig(level=log_level,
+                            format="%(asctime)s %(levelname)s: %(message)s")
+
+    def getBuild(self):
+        if self.build:
+            return self.build
+
+        if self.args.vm_type == 'ubuntu':
+            self.build = vmtypes.Ubuntu()
+        elif self.args.vm_type == 'coreos':
+            self.build = vmtypes.CoreOS()
+        elif self.args.vm_type == 'debian':
+            self.build = vmtypes.Debian()
+
+        return self.build
 
     def getConn(self):
-        if hasattr(self, 'conn'):
+        if self.conn:
             return self.conn
-
         self.conn = libvirt.open("qemu+ssh://%s/system" % self.args.vm_host)
         return self.conn
 
     def getDiskPools(self):
         """Return list of disk pools on VM host."""
-        return [current.name() for current in self.conn.listAllStoragePools()]
+        return [current.name() for current in self.getConn().listAllStoragePools()]
 
     def getNetworkInterfaces(self):
         """Return a list of viable network interfaces to connect to."""
-        return self.conn.listInterfaces()
+        return self.getConn().listInterfaces()
 
     def getVMList(self):
         domains = []
         # VMs that are not running
-        for current in self.conn.listDefinedDomains():
+        for current in self.getConn().listDefinedDomains():
             domains.append(current)
         # VMs that are currently running on the host
-        for current in self.conn.listDomainsID():
-            domains.append(self.conn.lookupByID(current).name())
+        for current in self.getConn().listDomainsID():
+            domains.append(self.getConn().lookupByID(current).name())
         return domains
 
 
@@ -77,20 +98,20 @@ class VMBuilder(object):
                             type=int,
                             help="Default size of hard disk image, in GB. Default: %(default)d")
         parser.add_argument("--domain_name",
-                            default="server.boston.jeffreyforman.net",
+                            default="wired.boston.jeffreyforman.net",
                             help="Domain name the VM upon creation. Default: %(default)s")
         parser.add_argument("--dry_run",
                             action="store_true",
                             help="Don't actually do anything, but print out what would have been done.")
         parser.add_argument("--host_name",
                            help="Virtual Machine Hostname")
-        parser.add_argument("--ip_address",
-                            default=None,
-                            help="Static IP address for VM.")
+        # parser.add_argument("--ip_address",
+        #                     default=None,
+        #                     help="Static IP address for VM.")
         # TODO: Figure out a way to programatically make releases a choice
         parser.add_argument("--location",
                             help="URL to installation source. Default: %(default)s",
-                            default="http://mirror.uoregon.edu/ubuntu/dists/utopic/main/installer-amd64/")
+                            default="ftp://debian.csail.mit.edu/debian/dists/jessie/main/installer-amd64/")
         parser.add_argument("--memory",
                            type=int,
                            default=512,
@@ -100,7 +121,7 @@ class VMBuilder(object):
                             default="localhost",
                             help="VM host system to connect to for creating VM guest. Default: %(default)s")
         parser.add_argument("--vm_type",
-                            choices=["coreos", "ubuntu"],
+                            choices=["coreos", "debian", "ubuntu"],
                             help="Type of VM you wish to create.")
         args = parser.parse_args()
         return args
@@ -117,8 +138,7 @@ class VMBuilder(object):
         command_line.extend(["--format", "qcow2"])
         command_line.extend(["--prealloc-metadata"])
 
-        if self.args.debug:
-            logging.debug("Create disk image command line: %s", command_line)
+        logging.debug("Create disk image command line: %s", command_line)
 
         if self.args.dry_run:
             logging.info("DRYRUN: No disk image was created.")
@@ -130,8 +150,7 @@ class VMBuilder(object):
         except subprocess.CalledProcessError as err:
             logging.error("Error in creating disk image: %s.", err.output)
             raise
-
-        logging.info("Disk image created successfully. Output: %s", output)
+        logging.info("Disk image created successfully. Output: %s", output.strip())
 
     def normalizeVMState(self):
         """Perform presence checks on disk image and VM itself.
@@ -141,7 +160,7 @@ class VMBuilder(object):
         delete both and proceed in a 'clean' state."""
 
         vm_list = self.getVMList()
-        pool_volumes = [x.name() for x in self.conn.storagePoolLookupByName(
+        pool_volumes = [x.name() for x in self.getConn().storagePoolLookupByName(
             self.args.disk_pool_name).listAllVolumes()]
         vm_name = "%s.%s" % (self.args.host_name, self.args.domain_name)
 
@@ -155,7 +174,7 @@ class VMBuilder(object):
                 if self.args.dry_run:
                     logging.info("DRY RUN: Disk image not actually deleted.")
                 else:
-                    self.conn.storagePoolLookupByName(self.args.disk_pool_name).storageVolLookupByName(vm_name).delete()
+                    self.getConn().storagePoolLookupByName(self.args.disk_pool_name).storageVolLookupByName(vm_name).delete()
                     logging.info("VM disk image deleted.")
                 # TODO: Handle errors where the delete fails.
             else:
@@ -173,9 +192,9 @@ class VMBuilder(object):
                              "and its data stores.")
                 return
 
-            if self.conn.lookupByName(vm_name).isActive():
-                self.conn.lookupByName(vm_name).destroy()
-            self.conn.lookupByName(vm_name).undefine()
+            if self.getConn().lookupByName(vm_name).isActive():
+                self.getConn().lookupByName(vm_name).destroy()
+            self.getConn().lookupByName(vm_name).undefine()
             return
 
         # TODO: implement/test that this actually throws an exception
@@ -183,7 +202,27 @@ class VMBuilder(object):
                           "flag not passed to delete if present.", vm_name)
 
     def executeVirtInstall(self):
-        command_line = ["/usr/bin/virt-install", "--autostart"]
+        command_line = ["/usr/bin/virt-install", "--autostart",
+                        "--nographics",
+                        '--console pty,target_type=serial']
+        self.flags.update({
+          "connect": "qemu+ssh://%s/system" % self.args.vm_host,
+          "disk": "vol=%s/%s.%s,cache=none" % (self.args.disk_pool_name,
+                                               self.args.host_name,
+                                               self.args.domain_name),
+          "location": self.args.location,
+          "name": "%s.%s" % (self.args.host_name, self.args.domain_name),
+          "network": "bridge=%s" % self.args.bridge_interface,
+          "os-type": "linux",
+          "ram": self.args.memory,
+          "vcpus": self.args.cpus,
+          "virt-type": "kvm",
+        })
+
+        extra_args = self.getBuild().getExtraArgs()
+        if extra_args:
+            self.flags.update({'extra-args': extra_args})
+
         for flag, value in self.flags.iteritems():
             command_line.extend(["--%s" % flag, str(value)])
             logging.debug("flag/type: %s/%s, value/type: %s/%s",
@@ -200,7 +239,6 @@ class VMBuilder(object):
             subprocess.call(str_command_line,
                             stderr=subprocess.STDOUT,
                             shell=True)
-            pass
         except subprocess.CalledProcessError as err:
             logging.error("virt-install cmd: %s", err.cmd)
             logging.exception("virt-install output: %s", err.output)
@@ -218,34 +256,18 @@ class VMBuilder(object):
         logging.info("VM %s.%s creation is complete.", self.args.host_name,
                     self.args.domain_name)
 
-    def createVMBuilderObject(self):
-        if self.args.vm_type == "ubuntu":
-            self.build = ubuntu.Ubuntu()
-        else:
-            logging.fatal("Your vm_type is not supported.")
-            raise HandledException
 
 def main():
     """Main function for handling VM and disk creation."""
 
     vm = VMBuilder()
 
-    if vm.args.debug:
-        log_level = logging.DEBUG
-    else:
-        log_level = logging.INFO
-
-    logging.basicConfig(level=log_level,
-                        format="%(asctime)s %(levelname)s: %(message)s")
-
     if vm.args.command == 'list_disk_pools':
         print vm.getDiskPools()
     elif vm.args.command == 'list_network_interfaces':
         print vm.getNetworkInterfaces()
     elif vm.args.command == 'create_vm':
-        vm.createVMBuilderObject()
-        vm.build.composeVirtinstallArgs()
-        vm.build.createVM()
+        vm.getBuild().createVM()
     else:
         logging.fatal("The command you entered is not recognized.")
 
