@@ -55,12 +55,13 @@ class Debian(vmbuilder.VMBuilder):
 
     return result
       
-class Ubuntu(vmbuilder.VMBuilder):
+class Ubuntu(Debian):
 
   def __init__(self):
       super(Ubuntu, self).__init__()
 
   def getExtraArgs(self):
+
     extra_args = {
       "keyboard-configuration/xkb-keymap": "us",
       #"console-keymaps-at/keymap": "us",

@@ -7,10 +7,6 @@ import sys
 
 import vmtypes
 
-# TODO: Config file for defaults/assumptions?
-# Figure out better way to not run virsh commands? all libvirt api? how does dry run work?
-# FIX: Error in creating disk image: error: command 'vol-create-as' doesn't support option --connect
-
 class HandledException(Exception):
     pass
 
@@ -22,6 +18,9 @@ class VMBuilder(object):
         self.conn = None
         self.build = None
         self.flags = {}
+        self.vm_name = "%s.%s" % (self.args.host_name,
+                                  self.args.domain_name)
+
 
     def configureLogging(self):
         if self.args.debug:
@@ -55,85 +54,91 @@ class VMBuilder(object):
         """Return list of disk pools on VM host."""
         return [current.name() for current in self.getConn().listAllStoragePools()]
 
+    def getPoolVolumes(self, pool):
+        """Return list of all volumes in a disk pool."""
+        volumes = [x.name() for x in self.getConn().storagePoolLookupByName(
+            pool).listAllVolumes()]
+        return volumes
+
     def getNetworkInterfaces(self):
         """Return a list of viable network interfaces to connect to."""
         return self.getConn().listInterfaces()
 
-    def getVMList(self):
-        domains = []
-        # VMs that are not running
-        for current in self.getConn().listDefinedDomains():
-            domains.append(current)
-        # VMs that are currently running on the host
-        for current in self.getConn().listDomainsID():
-            domains.append(self.getConn().lookupByID(current).name())
+    def getDefinedVMs(self):
+        """Return list of all VM names on a VM host."""
+        domains = [x.name() for x in self.getConn().listAllDomains()]
         return domains
-
 
     def parseArgs(self):
         parser = argparse.ArgumentParser()
-        parser.add_argument('command',
-                            type=str,
-                            choices=['create_vm',
-                                     'list_disk_pools',
-                                     'list_network_interfaces'])
-        parser.add_argument("--bridge_interface",
-                            help=("NIC/VLAN to bridge."
-                                  "See command list_network_interfaces"))
-        parser.add_argument("--cpus",
-                            type=int,
-                            default=1,
-                            help="Number of CPUs. Default: %(default)d")
+        commands = parser.add_argument_group('commands')
+        commands.add_argument('command',
+                              type=str,
+                              choices=['create_vm',
+                                       'list_disk_pools',
+                                       'list_network_interfaces'])
+        vm_props = parser.add_argument_group('vm properties')
+        vm_props.add_argument("--bridge_interface",
+                              help=("NIC/VLAN to bridge."
+                                    "See command list_network_interfaces"))
+        vm_props.add_argument("--cpus",
+                              type=int,
+                              default=1,
+                              help="Number of CPUs. Default: %(default)d")
+        vm_props.add_argument("--disk_size_gb",
+                              default=10,
+                              type=int,
+                              help="Default size of hard disk image, in GB. Default: %(default)d")
+        vm_props.add_argument("--domain_name",
+                              default="wired.boston.jeffreyforman.net",
+                              help="Domain name the VM upon creation. Default: %(default)s")
+        vm_props.add_argument("--memory",
+                              type=int,
+                              default=512,
+                              choices=[512, 1024, 2048, 4096, 8192],
+                              help="Amount of RAM, in MB. Default: %(default)d")
+        vm_props.add_argument("--disk_pool_name",
+                              help=("Disk pool for VM disk image storage."
+                                    "See command list_disk_pools"))
+        vm_props.add_argument("--vm_type",
+                              choices=["coreos", "debian", "ubuntu"],
+                              help="Type of VM you wish to create.")
+        vm_props.add_argument("--host_name",
+                              help="Virtual Machine Hostname")
+        vm_props.add_argument("--dist_location",
+                              help="URL to installation source. Default: %(default)s",
+                              default="ftp://debian.csail.mit.edu/debian/dists/jessie/main/installer-amd64/")
+
+        vm_host_props = parser.add_argument_group('vm host properties')
+        vm_host_props.add_argument("--vm_host",
+                                   default="localhost",
+                                   help="VM host system to connect to for creating VM guest. Default: %(default)s")
+
         parser.add_argument("--debug",
                             action="store_true",
                             help="Display debug output when executing virt-install.")
         parser.add_argument("--deleteifexists",
                             action="store_true",
                             help="Delete VM data store and configuration if it exists.")
-        parser.add_argument("--disk_pool_name",
-                            help=("Disk pool for VM disk image storage."
-                            "See command list_disk_pools"))
-        parser.add_argument("--disk_size_gb",
-                            default=10,
-                            type=int,
-                            help="Default size of hard disk image, in GB. Default: %(default)d")
-        parser.add_argument("--domain_name",
-                            default="wired.boston.jeffreyforman.net",
-                            help="Domain name the VM upon creation. Default: %(default)s")
         parser.add_argument("--dry_run",
                             action="store_true",
                             help="Don't actually do anything, but print out what would have been done.")
-        parser.add_argument("--host_name",
-                           help="Virtual Machine Hostname")
         # parser.add_argument("--ip_address",
         #                     default=None,
         #                     help="Static IP address for VM.")
         # TODO: Figure out a way to programatically make releases a choice
-        parser.add_argument("--location",
-                            help="URL to installation source. Default: %(default)s",
-                            default="ftp://debian.csail.mit.edu/debian/dists/jessie/main/installer-amd64/")
-        parser.add_argument("--memory",
-                           type=int,
-                           default=512,
-                           choices=[512, 1024, 2048, 4096, 8192],
-                           help="Amount of RAM, in MB. Default: %(default)d")
-        parser.add_argument("--vm_host",
-                            default="localhost",
-                            help="VM host system to connect to for creating VM guest. Default: %(default)s")
-        parser.add_argument("--vm_type",
-                            choices=["coreos", "debian", "ubuntu"],
-                            help="Type of VM you wish to create.")
         args = parser.parse_args()
         return args
 
     def createDiskImage(self):
-        """Attempt to create a qcow2 disk image."""
+        """Create a qcow2 disk image."""
+        # TOOD: Figure out an API-ish way to create a volume since vol-create-as does not support
+        # providing a --connect flag.
 
-        vm_name = "%s.%s" % (self.args.host_name, self.args.domain_name)
         command_line = ["/usr/bin/virsh", "vol-create-as"]
-        # TODO: Make work command_line.extend(["--connect", "qemu+ssh://%s/system" % args.vm_host])
+        #command_line.extend(["--connect", "qemu+ssh://%s/system" % self.args.vm_host])
         command_line.extend(["--pool", self.args.disk_pool_name])
-        command_line.extend(["--name", "%s" % vm_name])
+        command_line.extend(["--name", "%s" % self.vm_name])
         command_line.extend(["--capacity", "%dG" % self.args.disk_size_gb])
         command_line.extend(["--format", "qcow2"])
         command_line.extend(["--prealloc-metadata"])
@@ -145,78 +150,83 @@ class VMBuilder(object):
             return
 
         try:
+            # NO shell=true here.
             output = subprocess.check_output(command_line,
-                                             stderr=subprocess.STDOUT)
+                                           stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as err:
             logging.error("Error in creating disk image: %s.", err.output)
             raise
-        logging.info("Disk image created successfully. Output: %s", output.strip())
+        logging.info("Disk image created successfully.")
+        logging.debug("Disk image creation output: %s", output)
 
-    def normalizeVMState(self):
-        """Perform presence checks on disk image and VM itself.
-        If disk image and VM exist already, error out.
-
-        If disk image and VM exist already, and --deleteifexists flag is passed,
-        delete both and proceed in a 'clean' state."""
-
-        vm_list = self.getVMList()
-        pool_volumes = [x.name() for x in self.getConn().storagePoolLookupByName(
-            self.args.disk_pool_name).listAllVolumes()]
-        vm_name = "%s.%s" % (self.args.host_name, self.args.domain_name)
+    def deleteVMImage(self):
+        logging.debug("Pool %s volumes: %s",
+                      self.args.disk_pool_name,
+                      self.getPoolVolumes(self.args.disk_pool_name))
 
         logging.info("Checking if a previous disk image for this host already exists.")
-        logging.debug("Pool %s volumes: %s", self.args.disk_pool_name,
-            pool_volumes)
-        if vm_name in pool_volumes:
-            logging.info("Disk image for this VM already exists.")
-            if self.args.deleteifexists:
-                logging.info("Deleteifexists flag passed, deleting VM disk image.")
-                if self.args.dry_run:
-                    logging.info("DRY RUN: Disk image not actually deleted.")
-                else:
-                    self.getConn().storagePoolLookupByName(self.args.disk_pool_name).storageVolLookupByName(vm_name).delete()
-                    logging.info("VM disk image deleted.")
-                # TODO: Handle errors where the delete fails.
-            else:
-                logging.error("Flag --deleteifexists NOT passed. Not deleting " +
-                              "an existing VM disk image.")
-                raise HandledException
-
-        if vm_name not in vm_list:
-            logging.info("VM %s not already defined.", vm_name)
-            return False
-
-        if self.args.deleteifexists:
-            if self.args.dry_run:
-                logging.info("DRYRUN: Would have deleted both VM " +
-                             "and its data stores.")
-                return
-
-            if self.getConn().lookupByName(vm_name).isActive():
-                self.getConn().lookupByName(vm_name).destroy()
-            self.getConn().lookupByName(vm_name).undefine()
+        if self.vm_name not in self.getPoolVolumes(self.args.disk_pool_name):
+            logging.info("VM image does not exist for this host. Nothing to delete.")
             return
 
-        # TODO: implement/test that this actually throws an exception
-        logging.exception("VM %s already exists and --deleteifexists " +
-                          "flag not passed to delete if present.", vm_name)
+        logging.info("Attempting to delete image in pool %s for vm %s.",
+                     self.args.disk_pool_name,
+                     self.vm_name)
+        if self.args.dry_run:
+            logging.info("DRY RUN: Disk image not actually deleted.")
+            return
+
+        if not self.args.deleteifexists:
+            logging.error("VM image found for host, but --deleteifexists flag "
+                          "not passed.")
+            raise HandledException
+        self.getConn().storagePoolLookupByName(
+            self.args.disk_pool_name).storageVolLookupByName(self.vm_name).delete()
+        logging.info("Finished deleting VM image for VM.")
+
+    def deleteVM(self):
+        if self.args.dry_run:
+            logging.info("DRY RUN: VM would have been deleted here.")
+            return
+
+        if self.vm_name not in self.getDefinedVMs():
+            logging.info("VM does not already exist.")
+            return
+
+        logging.info("Found existing VM with same name.")
+        if not self.args.deleteifexists:
+            logging.error("VM image found, but --deleteifexists flag not passed.")
+            raise HandledException
+
+        if self.getConn().lookupByName(self.vm_name).isActive():
+            self.getConn().lookupByName(self.vm_name).destroy()
+        self.getConn().lookupByName(self.vm_name).undefine()
+
+    def normalizeVMState(self):
+        """Delete pre-existing VM and disk image if desired.
+
+        If args.deleteifexists, delete VM and disk image.
+        Else raise error.
+        """
+
+        self.deleteVM()
+        self.deleteVMImage()
 
     def executeVirtInstall(self):
         command_line = ["/usr/bin/virt-install", "--autostart",
-                        "--nographics",
-                        '--console pty,target_type=serial']
+                        "--nographics"]
+                        #'--console pty,target_type=serial']
         self.flags.update({
-          "connect": "qemu+ssh://%s/system" % self.args.vm_host,
-          "disk": "vol=%s/%s.%s,cache=none" % (self.args.disk_pool_name,
-                                               self.args.host_name,
-                                               self.args.domain_name),
-          "location": self.args.location,
-          "name": "%s.%s" % (self.args.host_name, self.args.domain_name),
-          "network": "bridge=%s" % self.args.bridge_interface,
-          "os-type": "linux",
-          "ram": self.args.memory,
-          "vcpus": self.args.cpus,
-          "virt-type": "kvm",
+            "connect": "qemu+ssh://%s/system" % self.args.vm_host,
+            "disk": "vol=%s/%s,cache=none" % (self.args.disk_pool_name,
+                                              self.vm_name),
+            "location": self.args.dist_location,
+            "name": self.vm_name,
+            "network": "bridge=%s" % self.args.bridge_interface,
+            "os-type": "linux",
+            "ram": self.args.memory,
+            "vcpus": self.args.cpus,
+            "virt-type": "kvm",
         })
 
         extra_args = self.getBuild().getExtraArgs()
@@ -225,8 +235,8 @@ class VMBuilder(object):
 
         for flag, value in self.flags.iteritems():
             command_line.extend(["--%s" % flag, str(value)])
-            logging.debug("flag/type: %s/%s, value/type: %s/%s",
-                          flag, type(flag), value, type(value))
+            logging.debug("flag: %s, value: %s",
+                          flag, value)
 
         str_command_line = " ".join(command_line)
         logging.debug("virt-install command line: %s", str_command_line)
@@ -235,26 +245,19 @@ class VMBuilder(object):
             logging.info("DRYRUN: VM not actually created. Skipping.")
             return
 
-        try:
-            subprocess.call(str_command_line,
-                            stderr=subprocess.STDOUT,
-                            shell=True)
-        except subprocess.CalledProcessError as err:
-            logging.error("virt-install cmd: %s", err.cmd)
-            logging.exception("virt-install output: %s", err.output)
-
-        return
-
+        subprocess.call(str_command_line,
+                        stderr=subprocess.STDOUT,
+                        shell=True)
 
     def createVM(self):
         logging.info("Starting VM build for %s.%s.", self.args.host_name,
-                    self.args.domain_name)
+                     self.args.domain_name)
 
         self.normalizeVMState()
         self.createDiskImage()
         self.executeVirtInstall()
         logging.info("VM %s.%s creation is complete.", self.args.host_name,
-                    self.args.domain_name)
+                     self.args.domain_name)
 
 
 def main():
