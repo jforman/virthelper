@@ -1,0 +1,6 @@
+#cloud-config
+
+ssh_authorized_keys:
+ - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDBe4ZsvXRyYgU7NOmS84xUzyYl09ghoEmjcQNlSg8NNOYfbgRhZnaeB19kPC4flzrMbbvfNqk8BYpHbLOQ9dTs/+0u5SdiDYfoPC3v/Ha4T5cznfJcNlxqXHQoXv89BwX3XszKBE1fj0Z8uL1Aw0pF2o49ZWJ4UWf3mAt7ew91aQT6CNfL0ap5UA9cRTrChzfn+EV0iSPQ/nknDgArxpAyBVUvsmDVOJFjBfr81v+/GeX3EYRiSiyZD+bEdsWZFl40FiyAyFxQ1Kl/0lZFGKGxBnNT8L7RWCh/W80d66uN2eklQAAUHRpdjY4pPZQOGq3akU9AVP7O28XPcw4/WE/z jforman@interlaken
+
+hostname: ${vm_name}
