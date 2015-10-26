@@ -170,6 +170,7 @@ class VMBuilder(object):
                                  default=os.path.join(
                                      os.path.dirname(
                                          os.path.realpath(__file__)),
+                                     "configs",
                                      "coreos_user_data.template"),
                                  help=("Mako template for CoreOS cloud config "
                                        "user_data. Default: %(default)s"))
