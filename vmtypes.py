@@ -67,7 +67,12 @@ class CoreOS(BaseVM):
             if self.args.deleteifexists:
                 logging.info("Attempting remote cloud config path for %s: %s", self.vm_name,
                              cloud_config_path)
-                os.removedirs(cloud_config_path)
+                for root, dirs, files in os.walk(cloud_config_path,
+                                                 topdown=False):
+                    for name in files:
+                        os.remove(os.path.join(root, name))
+                    for name in dirs:
+                        os.rmdir(os.path.join(root, name))
             else:
                 logging.info("Tried to remove %s path, but --deleteifexists flag not "
                              "passed.", cloud_config_path)
