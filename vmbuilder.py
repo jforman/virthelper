@@ -286,7 +286,10 @@ class VMBuilder(object):
             "virt-type": "kvm",
         })
 
-        self.flags.update(self.getBuild().getVirtInstallCustomFlags())
+        virt_install_custom_flags = self.getBuild().getVirtInstallCustomFlags()
+        if virt_install_custom_flags:
+            self.flags.update(virt_install_custom_flags)
+
         extra_args = self.getBuild().getVirtInstallExtraArgs()
         if extra_args:
             logging.debug("Found extra-args for virt-install.")
