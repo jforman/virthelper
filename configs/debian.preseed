@@ -53,4 +53,6 @@ d-i grub-installer/timeout string 2
 d-i finish-install/keep-consoles boolean true
 d-i finish-install/reboot_in_progress note 
 
-d-i preseed/late_command string in-target sed -i '/^PermitRootLogin/c PermitRootLogin yes' /etc/ssh/sshd_config
+d-i preseed/late_command string in-target wget http://10.10.0.1/debian-postinstall.sh -O /tmp/debian-postinstall.sh; \
+    in-target /bin/chmod 755 /tmp/debian-postinstall.sh; \
+    in-target /bin/sh /tmp/debian-postinstall.sh;
