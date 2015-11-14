@@ -4,3 +4,29 @@ ssh_authorized_keys:
  - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDBe4ZsvXRyYgU7NOmS84xUzyYl09ghoEmjcQNlSg8NNOYfbgRhZnaeB19kPC4flzrMbbvfNqk8BYpHbLOQ9dTs/+0u5SdiDYfoPC3v/Ha4T5cznfJcNlxqXHQoXv89BwX3XszKBE1fj0Z8uL1Aw0pF2o49ZWJ4UWf3mAt7ew91aQT6CNfL0ap5UA9cRTrChzfn+EV0iSPQ/nknDgArxpAyBVUvsmDVOJFjBfr81v+/GeX3EYRiSiyZD+bEdsWZFl40FiyAyFxQ1Kl/0lZFGKGxBnNT8L7RWCh/W80d66uN2eklQAAUHRpdjY4pPZQOGq3akU9AVP7O28XPcw4/WE/z jforman@interlaken
 
 hostname: ${vm_name}
+
+coreos:
+  units:
+    - name:  systemd-networkd.service
+      command: restart
+% if not discovery_url is UNDEFINED:
+    - name: etcd2.service
+      command: start
+    - name: fleet.service
+      command: start
+    - name: flanneld.service
+      drop-ins:
+        - name: 50-network-config.conf
+          content: |
+            [Service]
+            ExecStartPre=/usr/bin/etcdctl set /coreos.com/network/config '{ "Network": "${fleet_overlay_network}" }'
+      command: start
+  etcd2:
+    discovery: ${discovery_url}
+    advertise-client-urls: http://${vm_name}:2379
+    initial-advertise-peer-urls: http://${vm_name}:2380
+    listen-client-urls: http://0.0.0.0:2379,http://0.0.0.0:4001
+    listen-peer-urls: http://0.0.0.0:2380
+  fleet:
+    public-ip: ${vm_name}
+% endif

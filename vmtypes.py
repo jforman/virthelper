@@ -9,11 +9,10 @@ from mako.template import Template
 
 from vmbuilder import VMBuilder, HandledException
 
+# NEXT: test overlay network flag
+
 class BaseVM(VMBuilder):
     """Base class for all VM types."""
-
-    def __init__(self):
-        super(BaseVM, self).__init__()
 
     def executePreVirtInstall(self):
         """Logic to execute right before running virt-install."""
@@ -39,110 +38,144 @@ class BaseVM(VMBuilder):
 class CoreOS(BaseVM):
     """CoreOS VM base class."""
 
-    def __init__(self):
-        super(CoreOS, self).__init__()
-        # Compressed local snapshot image path
-        self.comp_local_snapshot_image_path = "%s/coreos_production_qemu_image-%s.img.bz2" % (
-            self.getPoolPath(),
-            self.args.coreos_channel)
-        self.uncomp_local_snapshot_image_path = "%s/coreos_production_qemu_image-%s.img" % (
-            self.getPoolPath(),
-            self.args.coreos_channel)
+    discovery_url = None
 
-    def _getCloudConfigPath(self):
+    def getCompressedLocalSnapshotImagePath(self):
+        """Return absolute local path of compressed CoreOS snapshot image."""
+
+        return os.path.join(self.getDiskPoolPath(),
+                            "coreos_production_qemu_image-%s.img.bz2" % self.getCoreOSChannel())
+
+    def getUnCompressedLocalSnapshotImagePath(self):
+        """Return absolute local path of uncompressed CoreOS snapshot image."""
+        return self.getCompressedLocalSnapshotImagePath().rstrip(".bz2")
+
+    def getCloudConfigDir(self):
+        return os.path.join(self.getDiskPoolPath(), "coreos",
+                            self.getVmName())
+
+    def getCloudConfigPath(self):
         """Return absolute path to VM's cloud config file."""
-        return os.path.join(self.getPoolPath(), "coreos",
-                            self.vm_name, "openstack", "latest", "user_data")
+        return os.path.join(self.getCloudConfigDir(),
+                            "openstack", "latest", "user_data")
+
+    def getCloudConfigTemplate(self):
+        return self.args.coreos_cloud_config_template
+
+    def getCoreOSImageAge(self):
+        return self.args.coreos_image_age
+
+    def getCoreOSChannel(self):
+        return self.args.coreos_channel
+
+    def getClusterOverlaynetwork(self):
+        return self.args.coreos_cluster_overlay_network
 
     def deleteVM(self):
         super(CoreOS, self).deleteVM()
-        logging.info("Deleting CoreOS config drive for %s.", self.vm_name)
-        cloud_config_path = "%s/coreos/%s/openstack/latest" % (self.getPoolPath(), self.vm_name)
-        if os.path.exists(cloud_config_path):
+        logging.debug("Trying to delete %s cloud config in %s.",
+                      self.getVmName(),
+                      self.getCloudConfigPath())
+        if os.path.exists(self.getCloudConfigPath()):
             if self.args.dry_run:
-                logging.info("DRY RUN: Would have attempted to remove cloud config"
-                             " path: %s", cloud_config_path)
+                logging.info("DRY RUN: Would have attempted to remove cloud "
+                             "config path: %s", self.getCloudConfigPath())
                 return
 
             if self.args.deleteifexists:
-                logging.info("Attempting remote cloud config path for %s: %s", self.vm_name,
-                             cloud_config_path)
-                for root, dirs, files in os.walk(cloud_config_path,
+                logging.info("Attempting remote cloud config path for %s: %s",
+                             self.getVmName(), self.getCloudConfigPath())
+                for root, dirs, files in os.walk(self.getCloudConfigPath(),
                                                  topdown=False):
                     for name in files:
                         os.remove(os.path.join(root, name))
                     for name in dirs:
                         os.rmdir(os.path.join(root, name))
             else:
-                logging.info("Tried to remove %s path, but --deleteifexists flag not "
-                             "passed.", cloud_config_path)
+                logging.info("Tried to remove %s path, but --deleteifexists "
+                             "flag not passed.", self.getCloudConfigPath())
                 raise HandledException
 
     def normalizeVMState(self):
         super(CoreOS, self).normalizeVMState()
-        coreos_repo_image = "http://%s.release.core-os.net/amd64-usr/current/coreos_production_qemu_image.img.bz2" % self.args.coreos_channel
-        logging.debug("Determining if a new CoreOS snapshot image needs to be downloaded.")
-        if os.path.exists(self.comp_local_snapshot_image_path):
-            snapshot_ctime = os.path.getctime(self.comp_local_snapshot_image_path)
-            logging.debug("snapshot ctime: %s", snapshot_ctime)
+        coreos_repo_image = ("http://%s.release.core-os.net/amd64-usr/current/"
+                             "coreos_production_qemu_image.img.bz2" %
+                             self.getCoreOSChannel())
+        logging.debug("Determining if a new CoreOS snapshot image needs "
+                      "to be downloaded.")
+        if os.path.exists(self.getCompressedLocalSnapshotImagePath()):
+            snapshot_ctime = os.path.getctime(
+                self.getCompressedLocalSnapshotImagePath())
+            logging.debug("Compressed snapshot ctime: %s (%s)",
+                          snapshot_ctime,
+                          time.strftime('%Y-%m-%d %H:%M:%S',
+                                        time.localtime(snapshot_ctime)))
             now = time.time()
-            threshold = self.args.coreos_image_age * (24 * 60 * 60)
+            threshold = self.getCoreOSImageAge() * (60 * 60 * 24)
             if (now - snapshot_ctime) < threshold:
                 logging.info("CoreOS snapshot image is less than %s days old. "
-                             "Not re-downloading.", self.args.coreos_image_age)
+                             "Not re-downloading.", self.getCoreOSImageAge())
                 return
 
-            message = ("It has been more than %s days since redownloading CoreOS %s image. "
-                       "Let's delete the old one, and grab a new one." % (
-                           self.args.coreos_image_age, self.args.coreos_channel))
+            message = ("It has been more than %s days since re-downloading "
+                       "CoreOS %s image. Let's delete the old one, and grab "
+                       "a new one." % (self.getCoreOSImageAge(),
+                                       self.getCoreOSChannel()))
             if self.args.dry_run:
                 logging.info("DRY RUN: Would have deleted old image here.")
             else:
-                os.remove(self.comp_local_snapshot_image_path)
-                os.remove(self.uncomp_local_snapshot_image_path)
+                os.remove(self.getCompressedLocalSnapshotImagePath())
+                os.remove(self.getUnCompressedLocalSnapshotImagePath())
         else:
-            message = "No local CoreOS %s image was found. Need to download." % self.args.coreos_channel
+            message = ("No local CoreOS %s image was found. Need to "
+                       "download." % self.getCoreOSChannel())
 
         logging.info(message)
         if self.args.dry_run:
-            logging.info("DRY RUN: Would have retrieved a new %s CoreOS image here.",
-                         self.args.coreos_channel)
+            logging.info("DRY RUN: Would have retrieved a new %s CoreOS "
+                         "image here.", self.getCoreOSChannel())
             return
 
         logging.info("Attempting to download %s to %s.",
-                     coreos_repo_image, self.comp_local_snapshot_image_path)
+                     coreos_repo_image,
+                     self.getCompressedLocalSnapshotImagePath())
         urllib.urlretrieve(coreos_repo_image,
-                           self.comp_local_snapshot_image_path)
+                           self.getCompressedLocalSnapshotImagePath())
         logging.info("Finished download of %s to %s",
                      coreos_repo_image,
-                     self.comp_local_snapshot_image_path)
+                     self.getCompressedLocalSnapshotImagePath)
 
-        logging.debug("Decompressing CoreOS image: %s.", self.comp_local_snapshot_image_path)
-        subprocess.check_call(["/bin/bzip2", "-d", "-k", self.comp_local_snapshot_image_path])
-        logging.info("Done decompressing CoreOS image.")
+        logging.debug("Decompressing CoreOS image: %s.",
+                      self.getCompressedLocalSnapshotImagePath())
+        subprocess.check_call(["/bin/bzip2", "-d", "-k",
+                               self.getCompressedLocalSnapshotImagePath()])
+        logging.info("Finished decompressing CoreOS image.")
 
     def createDiskImage(self):
         """Create a qcow2 disk image using CoreOS snapshot image."""
 
-        vm_image_path = "%s/%s" % (self.getPoolPath(), self.vm_disk_image)
-
+        logging.debug("CoreOS vm image path: %s", self.getVmDiskImagePath())
         commands = []
         command_line = ["/usr/bin/qemu-img", "create", "-f", "qcow2"]
-        command_line.extend(["-b", self.uncomp_local_snapshot_image_path])
-        command_line.extend([vm_image_path])
+        command_line.extend(["-b",
+                             self.getUnCompressedLocalSnapshotImagePath()])
+        command_line.extend([self.getVmDiskImagePath()])
         logging.debug("qemu-img command line: %s", " ".join(command_line))
         commands.extend([command_line])
 
-        command_line = ["/usr/bin/virsh", "pool-refresh", "--pool", self.args.disk_pool_name]
+        command_line = ["/usr/bin/virsh", "pool-refresh",
+                        "--pool", self.getDiskPoolName()]
         commands.extend([command_line])
 
-        command_line = ["/usr/bin/virsh", "vol-upload", "--vol", os.path.basename(vm_image_path),
-                        "--pool", self.args.disk_pool_name, "--file", vm_image_path]
+        command_line = ["/usr/bin/virsh", "vol-upload",
+                        "--vol", os.path.basename(self.getVmDiskImagePath()),
+                        "--pool", self.getDiskPoolName(),
+                        "--file", self.getVmDiskImagePath()]
         commands.extend([command_line])
 
         try:
             # NO shell=true here.
-            logging.info("Creating CoreOS VM disk image.")
+            logging.info("Creating and uploading CoreOS VM disk image.")
             for current in commands:
                 logging.debug("executing: %s", " ".join(current))
                 if self.args.dry_run:
@@ -160,28 +193,57 @@ class CoreOS(BaseVM):
         extra_args = {
             "os-variant": "virtio26",
             "import": "",
-            "filesystem": "%s,config-2,type=mount,mode=squash" % os.path.join(
-                self.getPoolPath(), "coreos", self.vm_name),
+            "filesystem": "%s,config-2,type=mount,mode=squash" % self.getCloudConfigDir(),
         }
         return extra_args
 
     def executePreVirtInstall(self):
         self.writeCloudConfig()
 
+    def getDiscoveryURL(self):
+        if CoreOS.discovery_url:
+            return CoreOS.discovery_url
+
+        if self.args.dry_run:
+            logging.info("DRY RUN: Would have retrieved a new Discovery "
+                         "URL token.")
+            return
+
+        logging.info("Retrieving a new Discovery URL taken.")
+        f = urllib.urlopen("https://discovery.etcd.io/new")
+        url = f.read()
+        logging.info("Etcd Discovery URL %s.", url)
+        CoreOS.discovery_url = url
+        return CoreOS.discovery_url
+
 
     def writeCloudConfig(self):
         """Write VM's cloud config data to file."""
-        if not os.path.exists(os.path.dirname(self._getCloudConfigPath())):
-            os.makedirs(os.path.dirname(self._getCloudConfigPath()))
+        template = Template(filename=self.getCloudConfigTemplate())
 
-        template = Template(filename=self.args.coreos_cloud_config_template)
         cloud_config_vars = {
-            'vm_name': self.vm_name,
+            'vm_name': self.getVmName(),
         }
+
+        if self.args.coreos_create_cluster:
+            cloud_config_vars.update({
+                'discovery_url': self.getDiscoveryURL(),
+                'fleet_overlay_network': self.getClusterOverlaynetwork(),
+            })
+
         template_rendered = template.render(**cloud_config_vars)
-        with open(self._getCloudConfigPath(), "w") as cloud_config:
+
+        logging.debug("Cloud Config to be written: %s", template_rendered)
+
+        if self.args.dry_run:
+            logging.info("DRY RUN: Did not actually write Cloud Config.")
+            return
+
+        if not os.path.exists(os.path.dirname(self.getCloudConfigPath())):
+            os.makedirs(os.path.dirname(self.getCloudConfigPath()))
+
+        with open(self.getCloudConfigPath(), "w") as cloud_config:
             cloud_config.write(template_rendered)
-        logging.debug("rendered cloud config %s", template_rendered)
 
 class Debian(BaseVM):
     """Debian-specific configuration for VM installation.
@@ -189,12 +251,12 @@ class Debian(BaseVM):
     Includes Ubuntu as a subclass.
     """
 
-    def __init__(self):
-        super(Debian, self).__init__()
+    def getDistLocation(self):
+        return self.args.dist_location
 
     def getVirtInstallCustomFlags(self):
         return {
-            "location": self.args.dist_location,
+            "location": self.getDistLocation(),
         }
 
     def getVirtInstallExtraArgs(self):
@@ -244,9 +306,6 @@ class Debian(BaseVM):
 
 class Ubuntu(Debian):
     """Ubuntu-specific configuration for VM install."""
-
-    def __init__(self):
-        super(Ubuntu, self).__init__()
 
     def getVirtInstallExtraArgs(self):
         extra_args = {
