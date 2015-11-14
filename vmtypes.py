@@ -43,14 +43,15 @@ class CoreOS(BaseVM):
     def getCompressedLocalSnapshotImagePath(self):
         """Return absolute local path of compressed CoreOS snapshot image."""
 
-        return os.path.join(self.getDiskPoolPath(),
-                            "coreos_production_qemu_image-%s.img.bz2" % self.getCoreOSChannel())
+        img = "coreos_production_qemu_image-%s.img.bz2" % self.getCoreOSChannel()
+        return os.path.join(self.getDiskPoolPath(), img)
 
     def getUnCompressedLocalSnapshotImagePath(self):
         """Return absolute local path of uncompressed CoreOS snapshot image."""
         return self.getCompressedLocalSnapshotImagePath().rstrip(".bz2")
 
     def getCloudConfigDir(self):
+        """Return absolute directory path of VM's cloud config directory."""
         return os.path.join(self.getDiskPoolPath(), "coreos",
                             self.getVmName())
 
@@ -60,18 +61,26 @@ class CoreOS(BaseVM):
                             "openstack", "latest", "user_data")
 
     def getCloudConfigTemplate(self):
+        """Retun absolute path to cloud config template file."""
         return self.args.coreos_cloud_config_template
 
     def getCoreOSImageAge(self):
+        """Return CoreOS image age threshold (days)."""
         return self.args.coreos_image_age
 
     def getCoreOSChannel(self):
+        """Return the CoreOS channel used to create image."""
         return self.args.coreos_channel
 
     def getClusterOverlaynetwork(self):
+        """Return CIDR string used for CoreOS flannel network.
+
+        Example: '10.123.0.0/16'
+        """
         return self.args.coreos_cluster_overlay_network
 
     def deleteVM(self):
+        """Undefine a VM image in libvirt."""
         super(CoreOS, self).deleteVM()
         logging.debug("Trying to delete %s cloud config in %s.",
                       self.getVmName(),
@@ -97,6 +106,12 @@ class CoreOS(BaseVM):
                 raise HandledException
 
     def normalizeVMState(self):
+        """Prepare VM host system state for new VM installation.
+
+        This might include:
+          * Deleting an old VM and VM image if one exists of the same name.
+          * Redownloading a VM base image because of old age.
+        """
         super(CoreOS, self).normalizeVMState()
         coreos_repo_image = ("http://%s.release.core-os.net/amd64-usr/current/"
                              "coreos_production_qemu_image.img.bz2" %
@@ -190,17 +205,21 @@ class CoreOS(BaseVM):
             raise HandledException
 
     def getVirtInstallCustomFlags(self):
+        """Return dict of VM-type specific flags for virt-install."""
         extra_args = {
             "os-variant": "virtio26",
             "import": "",
-            "filesystem": "%s,config-2,type=mount,mode=squash" % self.getCloudConfigDir(),
+            "filesystem": ("%s,config-2,type=mount,mode=squash" %
+                           self.getCloudConfigDir()),
         }
         return extra_args
 
     def executePreVirtInstall(self):
+        """Execute CoreOS-specific commands before running virt-install."""
         self.writeCloudConfig()
 
     def getDiscoveryURL(self):
+        """Return a new etcd discovery URL token."""
         if CoreOS.discovery_url:
             return CoreOS.discovery_url
 
@@ -210,8 +229,9 @@ class CoreOS(BaseVM):
             return
 
         logging.info("Retrieving a new Discovery URL taken.")
-        f = urllib.urlopen("https://discovery.etcd.io/new")
-        url = f.read()
+        # TODO: Add error checking if the request fails.
+        durl_req = urllib.urlopen("https://discovery.etcd.io/new")
+        url = durl_req.read()
         logging.info("Etcd Discovery URL %s.", url)
         CoreOS.discovery_url = url
         return CoreOS.discovery_url
@@ -252,21 +272,29 @@ class Debian(BaseVM):
     """
 
     def getDistLocation(self):
+        """Return URL location of installation source."""
         return self.args.dist_location
 
     def getVirtInstallCustomFlags(self):
+        """Return dict of OS-type specific virt-install flags."""
         return {
             "location": self.getDistLocation(),
         }
 
     def getVirtInstallExtraArgs(self):
+        """Return constructed list of extra-args parameters.
+
+        Note: This starts out as a dict, but is reformatted as
+        key=var,key=var,...
+        as this is the expected format for virt-install.
+        """
         extra_args = {
             "keyboard-configuration/xkb-keymap": "us",
             "console-setup/ask_detect": "false",
             "locale": "en_US", #.UTF-8",
             "netcfg/get_domain": self.args.domain_name,
             "netcfg/get_hostname": self.args.host_name,
-            "preseed/url": "http://10.10.0.1/jf-custom-debian.preseed"
+            "preseed/url": self.getPreseedUrl(),
         }
 
         add_ons = ['serial', 'console=tty0', 'console=ttyS0,9600n8']
@@ -288,8 +316,9 @@ class Debian(BaseVM):
         # if self.args.ip_address:
         #   network_info = NETWORK_CONFIG[self.args.bridge_interface]
         #   if not self.args.ip_address.startswith(network_info['network']):
-        #     logging.error("You assigned an IP address (%s) that does not match the requested interface (%s).", args.ip_address,
-        #                   self.args.bridge_interface)
+        #     logging.error("You assigned an IP address (%s) that "
+        #                   "does not match the requested interface (%s).",
+        #                   args.ip_address, self.args.bridge_interface)
         #   raise vmbuilder.HandledException
         #
         #   extra_args += (" " +
@@ -310,7 +339,6 @@ class Ubuntu(Debian):
     def getVirtInstallExtraArgs(self):
         extra_args = {
             "keyboard-configuration/xkb-keymap": "us",
-            #"console-keymaps-at/keymap": "us",
             "console-keymaps-at/keymap": "American",
             "console-setup/ask_detect": "false",
             "console-setup/layoutcode": "us",
@@ -319,13 +347,13 @@ class Ubuntu(Debian):
             "locale": "en_US", #.UTF-8",
             "netcfg/get_domain": self.args.domain_name,
             "netcfg/get_hostname": self.args.host_name,
-            "preseed/url": "http://10.10.0.1/jf-custom-ubuntu.preseed"
+            "preseed/url": self.getPreseedUrl(),
         }
 
         add_ons = ['serial', 'console=tty0', 'console=ttyS0,9600n8']
 
-        # Get networkextra args working.
-        network_extra_args = self.getNetworkExtraArgs()
+        # TODO: Get network_extra_args working again.
+        # network_extra_args = self.getNetworkExtraArgs()
         result = []
         for key, value in extra_args.iteritems():
             result.append("%s=%s" % (key, value))

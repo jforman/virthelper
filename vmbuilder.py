@@ -88,6 +88,9 @@ class VMBuilder(object):
     def getDiskSize(self):
         return self.args.disk_size_gb
 
+    def getPreseedUrl(self):
+        return self.args.preseed_url
+
     def configureLogging(self):
         """Configure logging level."""
         if self.args.debug:
@@ -186,7 +189,6 @@ class VMBuilder(object):
                               help=("Size (GB) of disk image. "
                                     "Default: %(default)d"))
         vm_props.add_argument("--domain_name",
-                              default="wired.boston.jeffreyforman.net",
                               help="VM domain name. Default: %(default)s")
         vm_props.add_argument("--memory",
                               type=int,
@@ -252,13 +254,17 @@ class VMBuilder(object):
                                       "instance(s).")
         coreos_args.add_argument("--coreos_cluster_overlay_network",
                                  default="10.123.0.0/16",
-                                 help="Default overlay network used for fleet"
+                                 help="Default overlay network used for fleet "
                                       "clustering. Default: %(default)s")
 
+        # TODO: Implement this for single host installs.
         # parser.add_argument("--ip_address",
         #                     default=None,
         #                     help="Static IP address for VM.")
-        # TODO: Figure out a way to programatically make releases a choice
+
+        debian_args = parser.add_argument_group('debian-basevd vm properties')
+        debian_args.add_argument("--preseed_url",
+                                 help="URL of install preseed file.")
         args = parser.parse_args()
         return args
 
