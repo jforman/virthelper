@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<title>README.html</title>
+
+</head>
+
+<body>
+
+<h1>virtbuilder</h1>
+
+<p>virtbuilder is a helpful wrapper script that makes creating virtual machines managed by libvirt a lot easier and more automated.</p>
+
+<h2>Functionality Provided</h2>
+
+<ul>
+<li>Delete pre-existing VM and VM disk images before creating a new one.</li>
+<li>Ubuntu and Debian installs without needing to download an ISO locally.</li>
+<li>CoreOS cloud config support.</li>
+<li>CoreOS etcd-based cluster support using CoreOS public Discovery service.</li>
+<li>Listing disk pools and volumes in those pools.</li>
+</ul>
+
+<p>Supported types of virtual machines that can be created:
+* CoreOS
+* Ubuntu
+* Debian</p>
+
+<h2>Assumptions</h2>
+
+<ul>
+<li>Libvirt is configured on your VM host machine with at least one disk pool and bridged network interface.</li>
+</ul>
+
+<h2>Requirements</h2>
+
+<ul>
+<li>Python</li>
+<li>Python module: bs4, libvirt, mako</li>
+</ul>
+
+<h2>Usage</h2>
+
+<h3>Informational Commands</h3>
+
+<p>Before actually creating your VM, it's important to know a few things.</p>
+
+<p>What network interface do you want to bridge it to on your VM host? Yes, my script assumes you want to bridge to an interface.</p>
+
+<p>What disk pool do you want to store your VM's root disk image in?</p>
+
+<h4>List disk pools on localhost</h4>
+
+<p><code>
+% ./vmbuilder.py list_disk_pools
+['dump', 'default', 'localdump', 'boot-scratch']
+</code></p>
+
+<h4>List volumes in disk pool 'dump'</h4>
+
+<p><code>
+% ./vmbuilder.py --disk_pool dump list_pool_volumes
+['cd58.iso']
+</code></p>
+
+<h4>List network interfaces</h4>
+
+<p><code>
+% ./vmbuilder.py list_network_interface
+['br0', 'lo']
+</code></p>
+
+<h3>Creating a Virtual Machine</h3>
+
+<p>There are several required parameters.</p>
+
+<ul>
+<li>bridge_interface</li>
+<li>disk<em>pool</em>name</li>
+<li>host<em>name and domain</em>name</li>
+<li>vm_type</li>
+</ul>
+
+<h3>Creating a single Debian/Ubuntu VM</h3>
+
+<p><code>
+vmbuilder.py --bridge_interface ${vm_host_iface} --disk_pool_name ${disk_pool_name} --host_name ${vm_name} --vm_type ${host_type} --domain_name ${vm_domainname} --preseed_url http://${fqdn}/mycustom.pressed create_vm
+</code></p>
+
+<h3>Creating a three-cluster CoreOS VM set.</h3>
+
+<p>If you want to tie your CoreOS VMs together into an etcd-based cluster the following flags are required:</p>
+
+<ul>
+<li>cluster_size: an integer for the number of CoreOS hosts to create.</li>
+<li>coreos<em>create</em>cluster: No value here is needed. This is used to tell the script to retrieve an etcd Discovery URL token used for all hosts.</li>
+</ul>
+
+<p><code>
+vmbuilder.py \
+--bridge_interface ${vm_host_iface} --disk_pool_name localdump --host_name ${base_name} --vm_type coreos --domain_name ${vm_domainname} --coreos_create_cluster --cluster_size ${cluster_size} --coreos_cluster_overlay_network ${dotted_quad}/${netmask} create_vm
+</code></p>
+
+</body>
+</html>
