@@ -174,7 +174,8 @@ class VMBuilder(object):
                               type=str,
                               choices=['create_vm',
                                        'list_disk_pools',
-                                       'list_network_interfaces'])
+                                       'list_network_interfaces',
+                                       'list_pool_volumes'])
         vm_props = parser.add_argument_group('vm properties')
         vm_props.add_argument("--bridge_interface",
                               help=("NIC/VLAN to bridge."
@@ -428,6 +429,8 @@ def main():
 
     if vm.args.command == 'list_disk_pools':
         print vm.getDiskPools()
+    elif vm.args.command == 'list_pool_volumes':
+        print vm.getDiskPoolVolumes()
     elif vm.args.command == 'list_network_interfaces':
         print vm.getNetworkInterfaces()
     elif vm.args.command == 'create_vm':
