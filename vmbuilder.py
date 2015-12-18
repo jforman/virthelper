@@ -160,6 +160,18 @@ class VMBuilder(object):
         """Return a list of viable network interfaces to connect to."""
         return self.getConn().listInterfaces()
 
+    def getIPAddress(self):
+        return self.args.ip_address
+
+    def getNameserver(self):
+        return self.args.nameserver
+
+    def getNetmask(self):
+        return self.args.netmask
+
+    def getGateway(self):
+        return self.args.gateway
+
     def getDefinedVMs(self):
         """Return list of all VM names on a VM host."""
         domains = [x.name() for x in self.getConn().listAllDomains()]
@@ -178,6 +190,7 @@ class VMBuilder(object):
                                        'list_pool_volumes'])
         vm_props = parser.add_argument_group('vm properties')
         vm_props.add_argument("--bridge_interface",
+                              required=True,
                               help=("NIC/VLAN to bridge."
                                     "See command list_network_interfaces"))
         vm_props.add_argument("--cpus",
@@ -190,6 +203,7 @@ class VMBuilder(object):
                               help=("Size (GB) of disk image. "
                                     "Default: %(default)d"))
         vm_props.add_argument("--domain_name",
+                              required=True,
                               help="VM domain name. Default: %(default)s")
         vm_props.add_argument("--memory",
                               type=int,
@@ -197,17 +211,32 @@ class VMBuilder(object):
                               choices=[512, 1024, 2048, 4096, 8192],
                               help="Amount of RAM, in MB. Default: %(default)d")
         vm_props.add_argument("--disk_pool_name",
+                              required=True,
                               help=("Disk pool for VM disk image storage."
                                     "See command list_disk_pools"))
         vm_props.add_argument("--vm_type",
+                              required=True,
                               choices=["coreos", "debian", "ubuntu"],
                               help="Type of VM to create.")
         vm_props.add_argument("--host_name",
+                              required=True,
                               help="Virtual Machine Base Hostname")
         vm_props.add_argument("--dist_location",
                               help="Installation source. Default: %(default)s",
                               default=("ftp://debian.csail.mit.edu/debian/"
                                        "dists/jessie/main/installer-amd64/"))
+
+        network_props = parser.add_argument_group('network properties')
+        network_props.add_argument("--ip_address",
+                                   help="IP Address of the VM.")
+        network_props.add_argument("--nameserver",
+                                   action='append',
+                                   help="IP Address of DNS server. Multiple servers accepted.")
+        network_props.add_argument("--netmask",
+                                   default="255.255.255.0",
+                                   help="IP Netmask for static config.")
+        network_props.add_argument("--gateway",
+                                   help="IP Address of default gateway.")
 
         vm_host_props = parser.add_argument_group('vm host properties')
         vm_host_props.add_argument("--vm_host",
@@ -258,15 +287,16 @@ class VMBuilder(object):
                                  help="Default overlay network used for fleet "
                                       "clustering. Default: %(default)s")
 
-        # TODO: Implement this for single host installs.
-        # parser.add_argument("--ip_address",
-        #                     default=None,
-        #                     help="Static IP address for VM.")
-
         debian_args = parser.add_argument_group('debian-basevd vm properties')
         debian_args.add_argument("--preseed_url",
                                  help="URL of install preseed file.")
         args = parser.parse_args()
+        network_args = [args.ip_address, args.nameserver, args.gateway]
+        if any(network_args) and not all(network_args):
+            logging.error("To configure static networking, IP address, "
+                          "nameserver, netmask, and gateway are ALL required,")
+            raise HandledException
+
         return args
 
     def createDiskImage(self):
