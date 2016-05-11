@@ -251,6 +251,7 @@ class CoreOS(BaseVM):
 
         cloud_config_vars = {
             'vm_name': self.getVmName(),
+            'ssh_key': self.getSshKey(),
         }
 
         if self.args.coreos_create_cluster:
