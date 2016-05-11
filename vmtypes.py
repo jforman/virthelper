@@ -250,7 +250,7 @@ class CoreOS(BaseVM):
         template = Template(filename=self.getCloudConfigTemplate())
 
         cloud_config_vars = {
-            'vm_name': self.getVmName(),
+            'vm_name': self.getVmHostName(),
             'ssh_key': self.getSshKey(),
         }
 
