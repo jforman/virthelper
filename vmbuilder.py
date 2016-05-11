@@ -182,7 +182,7 @@ class VMBuilder(object):
         homedir = os.environ['HOME']
         key_files = ['id_dsa.pub', 'id_rsa.pub']
         for current_kf in key_files:
-            cf = os.path.join(homedir,".ssh",current_kf)
+            cf = os.path.join(homedir, ".ssh", current_kf)
             if os.path.exists(cf):
                 with open(cf, 'r') as f:
                     key = f.read()
