@@ -289,7 +289,7 @@ class Debian(BaseVM):
         elif self.getVmType() == "ubuntu":
             os_release = self.getUbuntuRelease()
 
-        return "https://%s/%s/%s/dists/main/installer-amd64" % (
+        return "http://%s/%s/dists/%s/main/installer-amd64" % (
             self.getDistMirror(), self.getVmType(), os_release)
 
     def getVirtInstallCustomFlags(self):
