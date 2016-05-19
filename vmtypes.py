@@ -4,6 +4,7 @@ import os
 import subprocess
 import time
 import urllib
+import urlparse
 
 from mako.template import Template
 
@@ -282,7 +283,14 @@ class Debian(BaseVM):
 
     def getDistLocation(self):
         """Return URL location of installation source."""
-        return self.args.dist_location
+
+        if self.getVmType() == "debian":
+            os_release = self.getDebianRelease()
+        elif self.getVmType() == "ubuntu":
+            os_release = self.getUbuntuRelease()
+
+        return "https://%s/%s/%s/dists/main/installer-amd64" % (
+            self.getDistMirror(), self.getVmType(), os_release)
 
     def getVirtInstallCustomFlags(self):
         """Return dict of OS-type specific virt-install flags."""

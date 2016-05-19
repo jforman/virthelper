@@ -82,6 +82,9 @@ class VMBuilder(object):
     def getRam(self):
         return self.args.memory
 
+    def getDistMirror(self):
+        return self.args.dist_mirror
+
     def getCpus(self):
         return self.args.cpus
 
@@ -102,16 +105,19 @@ class VMBuilder(object):
                             format="%(asctime)s %(filename)s:%(lineno)d "
                             "%(levelname)s: %(message)s")
 
+    def getVmType(self):
+        return self.args.vm_type
+
     def getBuild(self):
         """Create or return vm builder object."""
         if VMBuilder.build:
             return VMBuilder.build
 
-        if self.args.vm_type == 'ubuntu':
+        if self.getVmType() == 'ubuntu':
             VMBuilder.build = vmtypes.Ubuntu()
-        elif self.args.vm_type == 'coreos':
+        elif self.getVmType() == 'coreos':
             VMBuilder.build = vmtypes.CoreOS()
-        elif self.args.vm_type == 'debian':
+        elif self.getVmType() == 'debian':
             VMBuilder.build = vmtypes.Debian()
 
         return VMBuilder.build
@@ -189,6 +195,12 @@ class VMBuilder(object):
                 return key
         logging.fatal("Unable to read any SSH keys. Do you need to create one?")
 
+    def getUbuntuRelease(self):
+        return self.args.ubuntu_release
+
+    def getDebianRelease(self):
+        return self.args.debian_release
+
     @classmethod
     def parseArgs(cls):
         """Parse and return command line flags."""
@@ -233,10 +245,6 @@ class VMBuilder(object):
         vm_props.add_argument("--host_name",
                               required=True,
                               help="Virtual Machine Base Hostname")
-        vm_props.add_argument("--dist_location",
-                              help="Installation source. Default: %(default)s",
-                              default=("ftp://debian.csail.mit.edu/debian/"
-                                       "dists/jessie/main/installer-amd64/"))
 
         network_props = parser.add_argument_group('network properties')
         network_props.add_argument("--ip_address",
@@ -299,9 +307,19 @@ class VMBuilder(object):
                                  help="Default overlay network used for fleet "
                                       "clustering. Default: %(default)s")
 
-        debian_args = parser.add_argument_group('debian-basevd vm properties')
+        debian_args = parser.add_argument_group('debian-based vm properties')
         debian_args.add_argument("--preseed_url",
-                                 help="URL of install preseed file.")
+                                 help="URL of Debian-based OS install preseed file.")
+        debian_args.add_argument("--debian_release",
+                                 default="jessie",
+                                 help="Debian OS release to install. Default: %(default)s.")
+        debian_args.add_argument("--ubuntu_release",
+                                 default="xenial",
+                                 help="Ubuntu OS release to install. Default: %(default)s")
+        debian_args.add_argument("--dist_mirror",
+                                 help="Installation Mirror. Default: %(default)s",
+                                 default="mirrors.mit.edu")
+
         args = parser.parse_args()
         network_args = [args.ip_address, args.nameserver, args.gateway]
         if any(network_args) and not all(network_args):
