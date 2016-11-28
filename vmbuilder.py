@@ -150,7 +150,7 @@ class VMBuilder(object):
         except subprocess.CalledProcessError as err:
             logging.error("Error in creating disk image: %s.", err.output)
             raise
-        soup = BeautifulSoup(output)
+        soup = BeautifulSoup(output, "lxml")
         self.pool_path = soup.target.path.string
         return self.pool_path
 
