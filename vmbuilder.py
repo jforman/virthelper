@@ -186,14 +186,16 @@ class VMBuilder(object):
     def getSshKey(self):
         """Returns contents of Public SSH Key."""
         homedir = os.environ['HOME']
-        key_files = ['id_dsa.pub', 'id_rsa.pub']
+        key_files = ['id_dsa.pub', 'id_rsa.pub', 'authorized_keys']
+        keys = []
         for current_kf in key_files:
             cf = os.path.join(homedir, ".ssh", current_kf)
             if os.path.exists(cf):
                 with open(cf, 'r') as f:
-                    key = f.read()
-                return key
-        logging.fatal("Unable to read any SSH keys. Do you need to create one?")
+                    keys.extend(x.strip() for x in f.readlines())
+        if not keys:
+            logging.fatal("Unable to read any SSH keys. Do you need to create one?")
+        return keys
 
     def getUbuntuRelease(self):
         return self.args.ubuntu_release
