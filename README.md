@@ -19,7 +19,6 @@ Supported types of virtual machines that can be created:
 
 * Libvirt is configured on your VM host machine with at least one disk pool and bridged network interface.
 
-
 ## Requirements
 
 * Python
@@ -82,3 +81,27 @@ If you want to tie your CoreOS VMs together into an etcd-based cluster the follo
 vmbuilder.py \
 --bridge_interface ${vm_host_iface} --disk_pool_name localdump --host_name ${base_name} --vm_type coreos --domain_name ${vm_domainname} --coreos_create_cluster --cluster_size ${cluster_size} --coreos_cluster_overlay_network ${dotted_quad}/${netmask} create_vm
 ```
+
+#### Adding an NFS mount to your CoreOS machine
+
+An NFS mount stanza can be added to your cloud config file with the following flag.
+```
+--coreos_nfs_mount allmyfiles1:/foo/bar
+```
+
+This creates the following stanza in your cloud config:
+```
+    - name: rpc-statsd.service
+      command: start
+      enable: true
+    - name: foo-bar.mount
+      command: start
+      content: |
+        [Mount]
+	What=allmyfiles1:/foo/bar
+	Where=/foo/bar
+	Type=nfs
+```
+
+This will automatically start the statsd service, as well as mount /foo/bar from
+sever allmyfiles1 into /foo/bar on the CoreOS machine.

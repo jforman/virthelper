@@ -1,7 +1,9 @@
 #cloud-config
 
 ssh_authorized_keys:
- - ${ssh_key}
+% for key in ssh_keys:
+ - ${key}
+% endfor
 
 hostname: ${vm_name}
 
@@ -9,6 +11,20 @@ coreos:
   units:
     - name:  systemd-networkd.service
       command: restart
+% if not nfs_mounts is UNDEFINED:
+    - name: rpc-statsd.service
+      command: start
+      enable: true
+% for mount in nfs_mounts:
+    - name: ${mount['name']}
+      command: start
+      content: |
+        [Mount]
+	What=${mount['what']}
+	Where=${mount['where']}
+	Type=nfs
+% endfor
+% endif
 % if not discovery_url is UNDEFINED:
     - name: etcd2.service
       command: start

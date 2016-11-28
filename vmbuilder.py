@@ -306,6 +306,9 @@ class VMBuilder(object):
                                  default="10.123.0.0/16",
                                  help="Default overlay network used for fleet "
                                       "clustering. Default: %(default)s")
+        coreos_args.add_argument("--coreos_nfs_mount",
+                                 action="append",
+                                 help="Mount Host:Mount tuple on CoreOS machine.")
 
         debian_args = parser.add_argument_group('debian-based vm properties')
         debian_args.add_argument("--preseed_url",

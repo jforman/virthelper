@@ -245,6 +245,18 @@ class CoreOS(BaseVM):
         CoreOS.discovery_url = url
         return CoreOS.discovery_url
 
+    def getNfsMounts(self):
+        """Return list of dicts of NFS mounts for CoreOS cloud configs."""
+        if not self.args.coreos_nfs_mount:
+            return []
+        mounts = []
+        for current_set in self.args.coreos_nfs_mount:
+            server, mount_point = current_set.split(":")
+            name = mount_point.replace('/', '-').lstrip('-')
+            mounts.append({'name': name + '.mount',
+                           'what': current_set,
+                           'where': mount_point})
+        return mounts
 
     def writeCloudConfig(self):
         """Write VM's cloud config data to file."""
@@ -252,7 +264,8 @@ class CoreOS(BaseVM):
 
         cloud_config_vars = {
             'vm_name': self.getVmHostName(),
-            'ssh_key': self.getSshKey(),
+            'ssh_keys': self.getSshKey(),
+            'nfs_mounts': self.getNfsMounts()
         }
 
         if self.args.coreos_create_cluster:
