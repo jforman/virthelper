@@ -2,14 +2,14 @@
 
 ssh_authorized_keys:
 % for key in ssh_keys:
- - ${key}
+  - ${key}
 % endfor
 
 hostname: ${vm_name}
 
 coreos:
   units:
-    - name:  systemd-networkd.service
+    - name: systemd-networkd.service
       command: restart
 % if not nfs_mounts is UNDEFINED:
     - name: rpc-statsd.service

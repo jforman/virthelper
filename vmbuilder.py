@@ -192,7 +192,7 @@ class VMBuilder(object):
             cf = os.path.join(homedir, ".ssh", current_kf)
             if os.path.exists(cf):
                 with open(cf, 'r') as f:
-                    keys.extend(x.strip() for x in f.readlines())
+                    keys.extend(x.strip() for x in f.readlines() if x != "\n")
         if not keys:
             logging.fatal("Unable to read any SSH keys. Do you need to create one?")
         return keys
