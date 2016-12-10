@@ -31,12 +31,12 @@ coreos:
     - name: fleet.service
       command: start
     - name: flanneld.service
+      command: start
       drop-ins:
         - name: 50-network-config.conf
           content: |
             [Service]
             ExecStartPre=/usr/bin/etcdctl set /coreos.com/network/config '{ "Network": "${fleet_overlay_network}" }'
-      command: start
   etcd2:
     discovery: ${discovery_url}
     advertise-client-urls: http://${vm_name}:2379
