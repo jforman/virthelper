@@ -39,10 +39,10 @@ coreos:
             ExecStartPre=/usr/bin/etcdctl set /coreos.com/network/config '{ "Network": "${fleet_overlay_network}" }'
   etcd2:
     discovery: ${discovery_url}
-    advertise-client-urls: http://${vm_name}:2379
+    advertise-client-urls: http://${vm_name}:2379,http://${vm_name}:4001
     initial-advertise-peer-urls: http://${vm_name}:2380
     listen-client-urls: http://0.0.0.0:2379,http://0.0.0.0:4001
-    listen-peer-urls: http://0.0.0.0:2380
+    listen-peer-urls: http://${vm_name}:2380,http://${vm_name}:7001
   fleet:
     public-ip: ${vm_name}
   update:
