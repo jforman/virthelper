@@ -45,4 +45,6 @@ coreos:
     listen-peer-urls: http://0.0.0.0:2380
   fleet:
     public-ip: ${vm_name}
+  update:
+    reboot-strategy: "etcd-lock"
 % endif
