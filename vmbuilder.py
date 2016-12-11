@@ -140,6 +140,10 @@ class VMBuilder(object):
         """Return the absolute path for the VM's disk pool."""
         # TODO(jforman): Can you get disk pool XML via the API?
         # Does this provide for using remote host?
+        if not self.pool_path is None:
+            logging.debug("Returning cached pool path.")
+            return self.pool_path
+
         command_line = ["/usr/bin/virsh",
                         "pool-dumpxml",
                         self.getDiskPoolName()]
