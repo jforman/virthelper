@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 """A helpful wrapper for using libvirt to create virtual machines."""
 import argparse
-from bs4 import BeautifulSoup
-# TOOD(jforman): Figure out how to run script without libvirt locally.
-# Are there usecases?
-import libvirt
 import logging
 import os
 import subprocess
 import sys
+
+from bs4 import BeautifulSoup
+import ipaddress
+import libvirt
 
 import vmtypes
 
@@ -23,15 +23,30 @@ class VMBuilder(object):
     conn = None
     pool_path = None
     vm_hostname = None
+    cluster_index = 1
 
     def __init__(self):
         self.args = self.parseArgs()
         self.configureLogging()
 
     def setArgs(self):
+        """Parse command-line arguments into object variable."""
         self.args = self.parseArgs()
 
+    def getClusterSize(self):
+        """Integer size of cluster being created."""
+        return self.args.cluster_size
+
+    def setClusterIndex(self, c_index):
+        """Set index of cluster VM being created."""
+        VMBuilder.cluster_index = c_index
+
+    def getClusterIndex(self):
+        """Get index of cluster VM being created."""
+        return VMBuilder.cluster_index
+
     def getVmHost(self):
+        """Get VM hostname containing VMs."""
         return self.args.vm_host
 
     def getVmHostNameArg(self):
@@ -69,6 +84,7 @@ class VMBuilder(object):
         return self.args.domain_name
 
     def getVmDiskImagePath(self):
+        """Get on-disk path to VM disk image."""
         return os.path.join(self.getDiskPoolPath(),
                             self.getVmDiskImageName())
 
@@ -77,21 +93,27 @@ class VMBuilder(object):
         return self.args.disk_pool_name
 
     def getNetworkBridgeInterface(self):
+        """Get network interface chosen for VM."""
         return self.args.bridge_interface
 
     def getRam(self):
+        """Return, in integer MB, amount of RAM, VM assigned."""
         return self.args.memory
 
     def getDistMirror(self):
+        """Base URL path for OS distribution mirror."""
         return self.args.dist_mirror
 
     def getCpus(self):
+        """Return integer of how many CPUs VM has."""
         return self.args.cpus
 
     def getDiskSize(self):
+        """Return integer GB of disk for VM disk image."""
         return self.args.disk_size_gb
 
     def getPreseedUrl(self):
+        """Return URL used to obtain OS preseed config file."""
         return self.args.preseed_url
 
     def configureLogging(self):
@@ -106,6 +128,7 @@ class VMBuilder(object):
                             "%(levelname)s: %(message)s")
 
     def getVmType(self):
+        """Return OS type of VM guest."""
         return self.args.vm_type
 
     def getBuild(self):
@@ -171,15 +194,55 @@ class VMBuilder(object):
         return self.getConn().listInterfaces()
 
     def getIPAddress(self):
-        return self.args.ip_address
+        """
+        If only one host, return IP address.
+        If more than one, we need to calculate which IP of set to return.
+        """
+        if not self.args.ip_address:
+            # Not statically configured, so return nothing (DHCP assumed).
+            return None
+
+        if self.getClusterSize() == 1:
+            return self.args.ip_address
+
+        network = ipaddress.ip_network(
+            unicode('%s/%s' % (
+                self.args.ip_address,
+                self.getNetmask())),
+            strict=False)
+
+        logging.debug("Computed Network: %s", network)
+        hosts = [x.exploded for x in network.hosts()]
+        host_start_index = hosts.index(self.args.ip_address)
+        logging.debug("Host start index: %s, size: %s, cluster index: %s.",
+                      host_start_index, self.getClusterSize(),
+                      self.getClusterIndex())
+        hosts_slice = hosts[
+            host_start_index:host_start_index+self.getClusterSize()]
+        logging.debug("Slice of hosts: %s", hosts_slice)
+
+        # Subtract one from the list because the list is
+        # zero-indexed, but the cluster index is not.
+        ip_address = hosts_slice[self.getClusterIndex()-1]
+        logging.debug("Generated IP address: %s", ip_address)
+        return ip_address
+
+    def getPrefixLength(self, ip_address, netmask):
+        """Given an IP address and netmask, return integer prefix length."""
+        composed_address = "%s/%s" % (ip_address, netmask)
+        logging.debug("Determing network prefix length of %s.", composed_address)
+        return ipaddress.IPv4Network(composed_address, strict=False).prefixlen
 
     def getNameserver(self):
+        """Return list of nameserver IP addresses."""
         return self.args.nameserver
 
     def getNetmask(self):
+        """Return dotted-quad IP subnet mask."""
         return self.args.netmask
 
     def getGateway(self):
+        """Return IP of default gateway."""
         return self.args.gateway
 
     def getDefinedVMs(self):
@@ -202,9 +265,11 @@ class VMBuilder(object):
         return keys
 
     def getUbuntuRelease(self):
+        """Return ubuntu release code name."""
         return self.args.ubuntu_release
 
     def getDebianRelease(self):
+        """Return Debian release code name."""
         return self.args.debian_release
 
     @classmethod
@@ -259,7 +324,6 @@ class VMBuilder(object):
                                    action='append',
                                    help="IP Address of DNS server. Multiple servers accepted.")
         network_props.add_argument("--netmask",
-                                   default="255.255.255.0",
                                    help="IP Netmask for static config.")
         network_props.add_argument("--gateway",
                                    help="IP Address of default gateway.")
@@ -330,7 +394,7 @@ class VMBuilder(object):
                                  default="mirrors.mit.edu")
 
         args = parser.parse_args()
-        network_args = [args.ip_address, args.nameserver, args.gateway]
+        network_args = [args.ip_address, args.nameserver, args.gateway, args.netmask]
         if any(network_args) and not all(network_args):
             logging.error("To configure static networking, IP address, "
                           "nameserver, netmask, and gateway are ALL required,")
@@ -428,7 +492,7 @@ class VMBuilder(object):
         if self.args.debug:
             command_line.extend(["--debug"])
 
-        if self.args.cluster_size > 1:
+        if self.getClusterSize():
             logging.info("More than one instance was asked to be created, "
                          "not connecting to console by default.")
             command_line.extend(["--noautoconsole"])
@@ -477,10 +541,11 @@ class VMBuilder(object):
     def createVM(self):
         """Main execution handler for the script."""
 
-        cluster_index = 1
-        while cluster_index <= self.args.cluster_size:
-            self.setVmHostName(self.getVmHostNameArg(), cluster_index,
-                               self.args.cluster_size)
+        for cluster_index in range(1, self.getClusterSize()+1):
+            self.setClusterIndex(cluster_index)
+            logging.debug("Starting to build host %s.", self.getClusterIndex())
+            self.setVmHostName(self.getVmHostNameArg(), self.getClusterIndex(),
+                               self.getClusterSize())
             logging.info("Starting VM build for %s", self.getVmName())
             logging.info("Creating instance %s of cluster with %d "
                          "instances.", self.getVmName(), self.args.cluster_size)
@@ -488,7 +553,6 @@ class VMBuilder(object):
             self.normalizeVMState()
             self.createDiskImage()
             self.executeVirtInstall()
-            cluster_index += 1
         logging.info("VM %s creation is complete.", self.getVmName())
 
 def main():

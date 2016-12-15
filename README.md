@@ -22,7 +22,7 @@ Supported types of virtual machines that can be created:
 ## Requirements
 
 * Python
-* Python module: bs4, libvirt, mako
+* Python module: bs4, ipaddress, libvirt, mako
 
 ## Usage
 
@@ -80,6 +80,16 @@ If you want to tie your CoreOS VMs together into an etcd-based cluster the follo
 ```
 vmbuilder.py \
 --bridge_interface ${vm_host_iface} --disk_pool_name localdump --host_name ${base_name} --vm_type coreos --domain_name ${vm_domainname} --coreos_create_cluster --cluster_size ${cluster_size} --coreos_cluster_overlay_network ${dotted_quad}/${netmask} create_vm
+```
+
+### A three-VM CoreOS cluster using static IP addressing for each CoreOS node.
+
+Like the above example, but this time with static IP addresses.
+
+Example uses 10.10.250.111 as the starting address for a three machine cluster. Therefore the IPs of the three machines, named coreF1, coreF2, and coreF3 are addressed 10.10.250.111, 10.10.250.112, and 10.10.250.113 respectively. Each coreOS machine uses 10.10.250.1 as their nameserver and default gateway.
+
+```
+vmbuilder.py create_vm --bridge_interface ${interface} --domain_name foo.dmz.example.net --disk_pool_name ${vm_store} --vm_type coreos --host_name coreF --cluster_size 3 --coreos_create_cluster --ip_address 10.10.250.111 --nameserver 10.10.250.1 --gateway 10.10.250.1 --netmask 255.255.255.0.
 ```
 
 #### Adding an NFS mount to your CoreOS machine

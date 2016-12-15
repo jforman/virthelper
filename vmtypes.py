@@ -4,7 +4,6 @@ import os
 import subprocess
 import time
 import urllib
-import urlparse
 
 from mako.template import Template
 
@@ -263,6 +262,7 @@ class CoreOS(BaseVM):
         template = Template(filename=self.getCloudConfigTemplate())
 
         cloud_config_vars = {
+            'etcd_listen_host': self.getVmName(),
             'vm_name': self.getVmName(),
             'ssh_keys': self.getSshKey(),
             'nfs_mounts': self.getNfsMounts()
@@ -274,9 +274,29 @@ class CoreOS(BaseVM):
                 'fleet_overlay_network': self.getClusterOverlaynetwork(),
             })
 
+        logging.debug("Checking if static networking is enabled.")
+        static_network = all([
+            self.getIPAddress(),
+            self.getNetmask(),
+            self.getGateway()])
+
+        logging.debug("Is static network configured? %s.", static_network)
+
+        if static_network:
+            cloud_config_vars.update({
+                'static_network': static_network,
+                'ip_address': self.getIPAddress(),
+                'dns': self.getNameserver(),
+                'gateway': self.getGateway(),
+                'network_prefixlen': self.getPrefixLength(self.getIPAddress(), self.getNetmask()),
+                'etcd_listen_host': self.getIPAddress(),
+            })
+
+        logging.debug("Cloud Config Vars: %s", cloud_config_vars)
+
         template_rendered = template.render(**cloud_config_vars)
 
-        logging.debug("Cloud Config to be written: %s", template_rendered)
+        logging.debug("Cloud Config to be written:\n%s", template_rendered)
 
         if self.args.dry_run:
             logging.info("DRY RUN: Did not actually write Cloud Config.")

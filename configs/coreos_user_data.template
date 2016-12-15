@@ -9,22 +9,31 @@ hostname: ${vm_name}
 
 coreos:
   units:
+% if not static_network is UNDEFINED:
     - name: systemd-networkd.service
-      command: restart
-% if not nfs_mounts is UNDEFINED:
-    - name: rpc-statsd.service
-      command: start
-      enable: true
-% for mount in nfs_mounts:
-    - name: ${mount['name']}
+      command: stop
+    - name: 00-eth0.network
+      runtime: true
+      content: |
+        [Match]
+        Name=eth0
+
+        [Network]
+% for current_dns in dns:
+        DNS=${current_dns}
+% endfor
+        Address=${ip_address}/${network_prefixlen}
+        Gateway=${gateway}
+    - name: down-interfaces.service
       command: start
       content: |
-        [Mount]
-	What=${mount['what']}
-	Where=${mount['where']}
-	Type=nfs
-% endfor
+        [Service]
+        Type=oneshot
+        ExecStart=/usr/bin/ip link set eth0 down
+        ExecStart=/usr/bin/ip addr flush dev eth0
 % endif
+    - name: systemd-networkd.service
+      command: restart
 % if not discovery_url is UNDEFINED:
     - name: etcd2.service
       command: start
@@ -39,12 +48,12 @@ coreos:
             ExecStartPre=/usr/bin/etcdctl set /coreos.com/network/config '{ "Network": "${fleet_overlay_network}" }'
   etcd2:
     discovery: ${discovery_url}
-    advertise-client-urls: http://${vm_name}:2379,http://${vm_name}:4001
-    initial-advertise-peer-urls: http://${vm_name}:2380
+    advertise-client-urls: http://${etcd_listen_host}:2379,http://${etcd_listen_host}:4001
+    initial-advertise-peer-urls: http://${etcd_listen_host}:2380
     listen-client-urls: http://0.0.0.0:2379,http://0.0.0.0:4001
-    listen-peer-urls: http://${vm_name}:2380,http://${vm_name}:7001
+    listen-peer-urls: http://${etcd_listen_host}:2380,http://${etcd_listen_host}:7001
   fleet:
-    public-ip: ${vm_name}
+    public-ip: ${etcd_listen_host}
   update:
     reboot-strategy: "etcd-lock"
 % endif
