@@ -492,7 +492,7 @@ class VMBuilder(object):
         if self.args.debug:
             command_line.extend(["--debug"])
 
-        if self.getClusterSize():
+        if self.getClusterSize() > 1:
             logging.info("More than one instance was asked to be created, "
                          "not connecting to console by default.")
             command_line.extend(["--noautoconsole"])
