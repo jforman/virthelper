@@ -252,7 +252,7 @@ class CoreOS(BaseVM):
         for current_set in self.args.coreos_nfs_mount:
             server, mount_point = current_set.split(":")
             name = mount_point.replace('/', '-').lstrip('-')
-            mounts.append({'name': name + '.mount',
+            mounts.append({'name': name,
                            'what': current_set,
                            'where': mount_point})
         return mounts
@@ -265,8 +265,10 @@ class CoreOS(BaseVM):
             'etcd_listen_host': self.getVmName(),
             'vm_name': self.getVmName(),
             'ssh_keys': self.getSshKey(),
-            'nfs_mounts': self.getNfsMounts()
         }
+
+        if self.getNfsMounts():
+            cloud_config_vars.update({'nfs_mounts': self.getNfsMounts()})
 
         if self.args.coreos_create_cluster:
             cloud_config_vars.update({

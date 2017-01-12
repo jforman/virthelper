@@ -7,6 +7,14 @@ ssh_authorized_keys:
 
 hostname: ${vm_name}
 
+% if not nfs_mounts is UNDEFINED:
+write-files:
+  - path: /etc/conf.d/nfs
+    permissions: '0644'
+    content: |
+      OPTS_RPC_MOUNTD=""
+% endif
+
 coreos:
   units:
 % if not static_network is UNDEFINED:
@@ -34,6 +42,20 @@ coreos:
 % endif
     - name: systemd-networkd.service
       command: restart
+% if not nfs_mounts is UNDEFINED:
+    - name: rpc-statd.service
+      command: start
+      enable: true
+% for current_mount in nfs_mounts:
+    - name: ${current_mount['name']}.mount
+      command: start
+      content: |
+        [Mount]
+        What=${current_mount['what']}
+        Where=${current_mount['where']}
+        Type=nfs
+% endfor
+% endif
 % if not discovery_url is UNDEFINED:
     - name: etcd2.service
       command: start
