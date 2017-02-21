@@ -285,7 +285,6 @@ class VMBuilder(object):
                                        'list_pool_volumes'])
         vm_props = parser.add_argument_group('vm properties')
         vm_props.add_argument("--bridge_interface",
-                              required=True,
                               help=("NIC/VLAN to bridge."
                                     "See command list_network_interfaces"))
         vm_props.add_argument("--cpus",
@@ -298,7 +297,6 @@ class VMBuilder(object):
                               help=("Size (GB) of disk image. "
                                     "Default: %(default)d"))
         vm_props.add_argument("--domain_name",
-                              required=True,
                               help="VM domain name. Default: %(default)s")
         vm_props.add_argument("--memory",
                               type=int,
@@ -306,15 +304,12 @@ class VMBuilder(object):
                               choices=[512, 1024, 2048, 4096, 8192],
                               help="Amount of RAM, in MB. Default: %(default)d")
         vm_props.add_argument("--disk_pool_name",
-                              required=True,
                               help=("Disk pool for VM disk image storage."
                                     "See command list_disk_pools"))
         vm_props.add_argument("--vm_type",
-                              required=True,
                               choices=["coreos", "debian", "ubuntu"],
                               help="Type of VM to create.")
         vm_props.add_argument("--host_name",
-                              required=True,
                               help="Virtual Machine Base Hostname")
 
         network_props = parser.add_argument_group('network properties')
@@ -555,6 +550,20 @@ class VMBuilder(object):
             self.executeVirtInstall()
         logging.info("VM %s creation is complete.", self.getVmName())
 
+    def verifyMinimumCreateVMArgs(self):
+        """Verify that list of minimum args to create a VM were passed."""
+        if not all([
+            self.args.bridge_interface,
+            self.args.domain_name,
+            self.args.disk_pool_name,
+            self.args.vm_type,
+            self.args.host_name,
+        ]):
+            logging.error("Missing critical arguments. Arguments considered "
+                          "critical: bridge_interface, domain_name, disk_pool, "
+                          "vm_type, host_name")
+            raise HandledException
+
 def main():
     """Main function for handling VM and disk creation."""
 
@@ -568,6 +577,7 @@ def main():
         print vm.getNetworkInterfaces()
     elif vm.args.command == 'create_vm':
         logging.debug("about to run vm.getbuild.createvm")
+        vm.verifyMinimumCreateVMArgs()
         vm.getBuild().createVM()
     else:
         logging.fatal("The command you entered is not recognized.")
@@ -576,7 +586,7 @@ if __name__ == "__main__":
     try:
         sys.exit(main())
     except HandledException:
-        logging.error("Exiting from handled exception.")
+        logging.exception("Exiting from handled exception.")
         sys.exit(1)
     except Exception as err:
         logging.exception(err)
