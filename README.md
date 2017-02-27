@@ -22,7 +22,7 @@ Supported types of virtual machines that can be created:
 ## Requirements
 
 * Python
-* Python module: bs4, ipaddress, libvirt, mako
+* Python module: bs4, ipaddress, libvirt, mako, netaddr
 
 ## Usage
 

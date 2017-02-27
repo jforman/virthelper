@@ -9,6 +9,7 @@ import sys
 from bs4 import BeautifulSoup
 import ipaddress
 import libvirt
+import netaddr
 
 import vmtypes
 
@@ -176,7 +177,7 @@ class VMBuilder(object):
             logging.debug("Command line %s; Output: %s", command_line, output)
         except subprocess.CalledProcessError as err:
             logging.error("Error in creating disk image: %s.", err.output)
-            raise
+            raise HandledException
         soup = BeautifulSoup(output, "lxml")
         self.pool_path = soup.target.path.string
         return self.pool_path
@@ -322,6 +323,8 @@ class VMBuilder(object):
                                    help="IP Netmask for static config.")
         network_props.add_argument("--gateway",
                                    help="IP Address of default gateway.")
+        network_props.add_argument("--mac_address",
+                                   help="Hard-coded network interface MAC address.")
 
         vm_host_props = parser.add_argument_group('vm host properties')
         vm_host_props.add_argument("--vm_host",
@@ -479,6 +482,20 @@ class VMBuilder(object):
         self.deleteVM()
         self.deleteVMImage()
 
+    def checkValidMacAddress(self, mac_address, fatal=False):
+        """Check if MAC address is valid. If fatal is true, raise exception."""
+        logging.debug("Verifying validity of MAC address: %s.", mac_address)
+        is_valid_mac = netaddr.valid_mac(mac_address)
+        if is_valid_mac:
+            logging.debug("Found valid MAC address.")
+            return True
+
+        logging.error("Invalid MAC address found.")
+        if fatal:
+            raise
+
+        return False
+
     def executeVirtInstall(self):
         """Execute virt-install with vm-specific flags."""
         command_line = ["/usr/bin/virt-install", "--autostart",
@@ -508,6 +525,11 @@ class VMBuilder(object):
         virt_install_custom_flags = self.getBuild().getVirtInstallCustomFlags()
         if virt_install_custom_flags:
             flags.update(virt_install_custom_flags)
+
+        if self.args.mac_address:
+            self.checkValidMacAddress(self.args.mac_address, fatal=True)
+            flags.update({'network':
+                flags['network'] + ",mac=" + self.args.mac_address })
 
         extra_args = self.getBuild().getVirtInstallExtraArgs()
         if extra_args:
