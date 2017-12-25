@@ -38,6 +38,10 @@ class BaseVM(VMBuilder):
         """Custom flags to append to the virt-install execution."""
         pass
 
+    def getVirtInstallFinalArgs(self):
+        """String of final params at the end of virt-install exection."""
+        pass
+
     def getDistroSpecificExtraArgs(self):
         """Custom Extra Args for a specific Distro."""
         return {}

@@ -542,6 +542,14 @@ class VMBuilder(object):
                           flag, value)
 
         str_command_line = " ".join(command_line)
+
+        final_args = self.getBuild().getVirtInstallFinalArgs()
+
+        if final_args:
+            logging.info("Adding final arguments to virt-install: %s",
+                         final_args)
+            str_command_line = str_command_line + " " + final_args
+
         logging.debug("virt-install command line: %s", str_command_line)
 
         self.getBuild().executePreVirtInstall()
