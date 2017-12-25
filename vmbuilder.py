@@ -516,7 +516,7 @@ class VMBuilder(object):
             "name": self.getVmName(),
             "network": "bridge=%s,model=virtio" % (
                 self.getNetworkBridgeInterface()),
-            "os-type": "unix",
+            "os-type": "linux",
             "ram": self.getRam(),
             "vcpus": self.getCpus(),
             "virt-type": "kvm",
