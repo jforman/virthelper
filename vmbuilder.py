@@ -230,7 +230,7 @@ class VMBuilder(object):
 
     def getPrefixLength(self, ip_address, netmask):
         """Given an IP address and netmask, return integer prefix length."""
-        composed_address = "%s/%s" % (ip_address, netmask)
+        composed_address = u"%s/%s" % (ip_address, netmask)
         logging.debug("Determing network prefix length of %s.", composed_address)
         return ipaddress.IPv4Network(composed_address, strict=False).prefixlen
 
