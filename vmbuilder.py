@@ -11,6 +11,7 @@ import ipaddress
 import libvirt
 import netaddr
 
+import coreos
 import vmtypes
 
 class HandledException(Exception):
@@ -140,7 +141,7 @@ class VMBuilder(object):
         if self.getVmType() == 'ubuntu':
             VMBuilder.build = vmtypes.Ubuntu()
         elif self.getVmType() == 'coreos':
-            VMBuilder.build = vmtypes.CoreOS()
+            VMBuilder.build = coreos.CoreOS()
         elif self.getVmType() == 'debian':
             VMBuilder.build = vmtypes.Debian()
 
@@ -377,6 +378,10 @@ class VMBuilder(object):
         coreos_args.add_argument("--coreos_nfs_mount",
                                  action="append",
                                  help="Mount Host:Mount tuple on CoreOS machine.")
+        coreos_args.add_argument("--coreos_ct_version",
+                                 default="0.5.0",
+                                 help=("Version of CoreOS config transpiler "
+                                 "in the creation of the Ignition config."))
 
         debian_args = parser.add_argument_group('debian-based vm properties')
         debian_args.add_argument("--preseed_url",
@@ -498,6 +503,7 @@ class VMBuilder(object):
 
     def executeVirtInstall(self):
         """Execute virt-install with vm-specific flags."""
+
         command_line = ["/usr/bin/virt-install", "--autostart",
                         "--nographics",
                         '--console pty,target_type=serial']
@@ -560,6 +566,7 @@ class VMBuilder(object):
         subprocess.call(str_command_line,
                         stderr=subprocess.STDOUT,
                         shell=True)
+
         self.getBuild().executePostVirtInstall()
 
     def createVM(self):

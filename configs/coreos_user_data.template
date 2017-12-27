@@ -1,81 +1,74 @@
-#cloud-config
+storage:
+  files:
+  - path: "/etc/hostname"
+    filesystem: root
+    contents:
+      inline: {{ vm_name }}
 
-ssh_authorized_keys:
-% for key in ssh_keys:
-  - ${key}
-% endfor
+passwd:
+  users:
+    - name: "core"
+      ssh_authorized_keys:
+{%- for key in ssh_keys %}
+        - "{{ key }}"
+{%- endfor %}
 
-hostname: ${vm_name}
-
-% if not nfs_mounts is UNDEFINED:
-write-files:
-  - path: /etc/conf.d/nfs
-    permissions: '0644'
-    content: |
-      OPTS_RPC_MOUNTD=""
-% endif
-
-coreos:
+{%- if static_network %}
+networkd:
   units:
-% if not static_network is UNDEFINED:
-    - name: systemd-networkd.service
-      command: stop
     - name: 00-eth0.network
-      runtime: true
-      content: |
+      contents: |
         [Match]
         Name=eth0
 
         [Network]
-% for current_dns in dns:
-        DNS=${current_dns}
-% endfor
-        Address=${ip_address}/${network_prefixlen}
-        Gateway=${gateway}
-    - name: down-interfaces.service
-      command: start
-      content: |
-        [Service]
-        Type=oneshot
-        ExecStart=/usr/bin/ip link set eth0 down
-        ExecStart=/usr/bin/ip addr flush dev eth0
-% endif
-    - name: systemd-networkd.service
-      command: restart
-% if not nfs_mounts is UNDEFINED:
-    - name: rpc-statd.service
-      command: start
+        Address={{ ip_address }}/{{ network_prefixlen }}
+        Gateway={{ gateway }}
+  {%- for current_dns in dns %}
+        DNS={{ current_dns -}}
+  {% endfor %}
+{% endif %}
+
+{%- if create_cluster %}
+etcd:
+   name: "{{ vm_name }}"
+   discovery: "{{ discovery_url }}"
+   advertise_client_urls: "http://{PRIVATE_IPV4}:2379"
+   initial_advertise_peer_urls: "http://{PRIVATE_IPV4}:2380"
+   listen_client_urls: "http://0.0.0.0:2379"
+   listen_peer_urls: "http://{PRIVATE_IPV4}:2380"
+   initial_cluster: "{{ vm_name }}=http://{PRIVATE_IPV4}:2380"
+
+flannel:
+  etcd_prefix: "/coreos.com/network2"
+  network_config: '{ "Network": "{{ fleet_overlay_network }}" }'
+
+locksmith:
+    reboot_strategy: "etcd-lock"
+    etcd_endpoints:  "http://localhost:2379"
+{% else %}
+locksmith:
+  reboot_strategy: "reboot"
+{%- endif %}
+
+{%- if nfs_mounts %}
+systemd:
+  units:
+{%- for current_mount in nfs_mounts %}
+    - name: {{ current_mount['name'] }}.mount
       enable: true
-% for current_mount in nfs_mounts:
-    - name: ${current_mount['name']}.mount
-      command: start
-      content: |
+      contents: |
+        [Unit]
+        Before=remote-fs.target
+
         [Mount]
-        What=${current_mount['what']}
-        Where=${current_mount['where']}
+        What={{ current_mount['what'] }}
+        Where={{ current_mount['where'] }}
         Type=nfs
-% endfor
-% endif
-% if not discovery_url is UNDEFINED:
-    - name: etcd2.service
-      command: start
-    - name: fleet.service
-      command: start
-    - name: flanneld.service
-      command: start
-      drop-ins:
-        - name: 50-network-config.conf
-          content: |
-            [Service]
-            ExecStartPre=/usr/bin/etcdctl set /coreos.com/network/config '{ "Network": "${fleet_overlay_network}" }'
-  etcd2:
-    discovery: ${discovery_url}
-    advertise-client-urls: http://${etcd_listen_host}:2379,http://${etcd_listen_host}:4001
-    initial-advertise-peer-urls: http://${etcd_listen_host}:2380
-    listen-client-urls: http://0.0.0.0:2379,http://0.0.0.0:4001
-    listen-peer-urls: http://${etcd_listen_host}:2380,http://${etcd_listen_host}:7001
-  fleet:
-    public-ip: ${etcd_listen_host}
-  update:
-    reboot-strategy: "etcd-lock"
-% endif
+        [Install]
+        WantedBy=remote-fs.target
+{% endfor %}
+{%- endif %}
+
+update:
+  group: "{{ coreos_channel }}"

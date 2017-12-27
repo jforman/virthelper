@@ -3,9 +3,6 @@ import logging
 import os
 import subprocess
 import time
-import urllib
-
-from mako.template import Template
 
 from vmbuilder import VMBuilder, HandledException
 
