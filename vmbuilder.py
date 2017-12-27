@@ -519,7 +519,6 @@ class VMBuilder(object):
             "os-type": "linux",
             "ram": self.getRam(),
             "vcpus": self.getCpus(),
-            "virt-type": "kvm",
         }
 
         virt_install_custom_flags = self.getBuild().getVirtInstallCustomFlags()
