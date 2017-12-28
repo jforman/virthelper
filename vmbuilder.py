@@ -373,8 +373,8 @@ class VMBuilder(object):
                                       "instance(s).")
         coreos_args.add_argument("--coreos_cluster_overlay_network",
                                  default="10.123.0.0/16",
-                                 help="Default overlay network used for fleet "
-                                      "clustering. Default: %(default)s")
+                                 help="Default overlay network used for "
+                                    "Flannel clustering. Default: %(default)s")
         coreos_args.add_argument("--coreos_nfs_mount",
                                  action="append",
                                  help="Mount Host:Mount tuple on CoreOS machine.")

@@ -27,21 +27,35 @@ networkd:
   {%- for current_dns in dns %}
         DNS={{ current_dns -}}
   {% endfor %}
-{% endif %}
+{%- endif %}
 
+{# NOTE: The hack below inserting the actual IP adress is due
+to the fact that libvirt is not a supported CoreOS metadata
+and transpiler plateform.
+https://github.com/coreos/coreos-metadata/pull/81
+https://github.com/coreos/container-linux-config-transpiler/pull/131
+
+Once the above pull requests are handled, the initial if block
+can be removed and PRIVATE_IPV4 can be the default all the time.
+#}
 {%- if create_cluster %}
+flannel:
+  network_config: '{ "Network": "{{ cluster_overlay_network }}" }'
+
 etcd:
    name: "{{ vm_name }}"
    discovery: "{{ discovery_url }}"
+{%- if static_network %}
+   advertise_client_urls: "http://{{ ip_address }}:2379"
+   initial_advertise_peer_urls: "http://{{ ip_address }}:2380"
+   listen_client_urls: "http://{{ ip_address}}:2379,http://127.0.0.1:2379"
+   listen_peer_urls: "http://{{ ip_address }}:2380"
+{% else %}
    advertise_client_urls: "http://{PRIVATE_IPV4}:2379"
    initial_advertise_peer_urls: "http://{PRIVATE_IPV4}:2380"
-   listen_client_urls: "http://0.0.0.0:2379"
+   listen_client_urls: "http://{PRIVATE_IPV4}:2379,http://127.0.0.1:2379"
    listen_peer_urls: "http://{PRIVATE_IPV4}:2380"
-   initial_cluster: "{{ vm_name }}=http://{PRIVATE_IPV4}:2380"
-
-flannel:
-  etcd_prefix: "/coreos.com/network2"
-  network_config: '{ "Network": "{{ fleet_overlay_network }}" }'
+{% endif %}
 
 locksmith:
     reboot_strategy: "etcd-lock"

@@ -74,7 +74,7 @@ class CoreOS(vmtypes.BaseVM):
         """Return the CoreOS channel used to create image."""
         return self.args.coreos_channel
 
-    def getClusterOverlaynetwork(self):
+    def getClusterOverlayNetwork(self):
         """Return CIDR string used for CoreOS flannel network.
 
         Example: '10.123.0.0/16'
@@ -358,7 +358,7 @@ class CoreOS(vmtypes.BaseVM):
 
         logging.info("Retrieving a new Discovery URL taken.")
         # TODO: Add error checking if the request fails.
-        durl_req = urllib.urlopen("https://discovery.etcd.io/new")
+        durl_req = urllib.urlopen("https://discovery.etcd.io/new?size=%d" % self.args.cluster_size)
         url = durl_req.read()
         logging.info("Etcd Discovery URL %s.", url)
         CoreOS.discovery_url = url
@@ -388,10 +388,11 @@ class CoreOS(vmtypes.BaseVM):
                 ).get_template(filename).render(context)
 
         cloud_config_vars = {
-            'etcd_listen_host': self.getVmName(),
-            'vm_name': self.getVmName(),
-            'ssh_keys': self.getSshKey(),
             'coreos_channel': self.getCoreOSChannel(),
+            'etcd_listen_host': self.getVmName(),
+            'ssh_keys': self.getSshKey(),
+            'ip_address': '"{"PRIVATE_IPV4"}""',
+            'vm_name': self.getVmName(),
         }
 
         if self.getNfsMounts():
@@ -399,9 +400,9 @@ class CoreOS(vmtypes.BaseVM):
 
         if self.args.coreos_create_cluster:
             cloud_config_vars.update({
+                'cluster_overlay_network': self.getClusterOverlayNetwork(),
                 'create_cluster': 1,
                 'discovery_url': self.getDiscoveryURL(),
-                'fleet_overlay_network': self.getClusterOverlaynetwork(),
             })
 
         logging.debug("Checking if static networking is enabled.")
@@ -415,16 +416,19 @@ class CoreOS(vmtypes.BaseVM):
         if static_network:
             cloud_config_vars.update({
                 'static_network': True,
-                'ip_address': self.getIPAddress(),
                 'dns': self.getNameserver(),
                 'gateway': self.getGateway(),
+                'ip_address': self.getIPAddress(),
                 'network_prefixlen': self.getPrefixLength(
                     self.getIPAddress(),
                     self.getNetmask()),
                 'etcd_listen_host': self.getIPAddress(),
             })
 
+
         logging.debug("Cloud Config Vars: %s", cloud_config_vars)
+
+
 
         template_rendered = render(self.getCloudConfigTemplate(),
                                    cloud_config_vars)
