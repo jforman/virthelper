@@ -25,7 +25,7 @@ class VMBuilder(object):
     conn = None
     pool_path = None
     vm_hostname = None
-    cluster_index = 1
+    cluster_index = 0
 
     def __init__(self):
         self.args = self.parseArgs()
@@ -572,7 +572,7 @@ class VMBuilder(object):
     def createVM(self):
         """Main execution handler for the script."""
 
-        for cluster_index in range(1, self.getClusterSize()+1):
+        for cluster_index in range(0, self.getClusterSize()):
             self.setClusterIndex(cluster_index)
             logging.debug("Starting to build host %s.", self.getClusterIndex())
             self.setVmHostName(self.getVmHostNameArg(), self.getClusterIndex(),
