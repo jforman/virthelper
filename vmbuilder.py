@@ -56,7 +56,7 @@ class VMBuilder(object):
         return self.args.host_name
 
     def setVmHostName(self, host_name, host_index, cluster_size):
-        """Return indexed hostname based upon name and index.
+        """Set indexed hostname based upon name and index.
 
         If the cluster_size is 1, just return the hostname.
         There is no reason to index a hostname if there is only one.
@@ -225,7 +225,7 @@ class VMBuilder(object):
 
         # Subtract one from the list because the list is
         # zero-indexed, but the cluster index is not.
-        ip_address = hosts_slice[self.getClusterIndex()-1]
+        ip_address = hosts_slice[self.getClusterIndex()]
         logging.debug("Generated IP address: %s", ip_address)
         return ip_address
 
@@ -584,7 +584,7 @@ class VMBuilder(object):
             self.normalizeVMState()
             self.createDiskImage()
             self.executeVirtInstall()
-        logging.info("VM %s creation is complete.", self.getVmName())
+            logging.info("VM %s creation is complete.", self.getVmName())
 
     def verifyMinimumCreateVMArgs(self):
         """Verify that list of minimum args to create a VM were passed."""
