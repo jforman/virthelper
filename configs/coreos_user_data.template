@@ -39,35 +39,62 @@ Once the above pull requests are handled, the initial if block
 can be removed and PRIVATE_IPV4 can be the default all the time.
 #}
 {%- if create_cluster %}
+locksmith:
+    reboot_strategy: "etcd-lock"
+
 flannel:
   network_config: '{ "Network": "{{ cluster_overlay_network }}" }'
+  etcd_cafile: /etc/ssl/certs/ca.pem
+  etcd_certfile: /etc/ssl/certs/kubernetes.pem
+  etcd_keyfile: /etc/ssl/certs/kubernetes-key.pem
+  etcd_endpoints: "https://127.0.0.1:2379"
 
 etcd:
    name: "{{ vm_name }}"
    discovery: "{{ discovery_url }}"
+   cert_file: "/etc/ssl/certs/kubernetes.pem"
+   key_file: "/etc/ssl/certs/kubernetes-key.pem"
+   peer_cert_file: "/etc/ssl/certs/kubernetes.pem"
+   peer_key_file: "/etc/ssl/certs/kubernetes-key.pem"
+   trusted_ca_file: "/etc/ssl/certs/ca.pem"
+   peer_trusted_ca_file: "/etc/ssl/certs/ca.pem"
+   peer_client_cert_auth: true
+   client_cert_auth: true
 {%- if static_network %}
-   advertise_client_urls: "http://{{ ip_address }}:2379"
-   initial_advertise_peer_urls: "http://{{ ip_address }}:2380"
-   listen_client_urls: "http://{{ ip_address}}:2379,http://127.0.0.1:2379"
-   listen_peer_urls: "http://{{ ip_address }}:2380"
+   advertise_client_urls: "https://{{ ip_address }}:2379"
+   initial_advertise_peer_urls: "https://{{ ip_address }}:2380"
+   listen_client_urls: "https://{{ ip_address }}:2379,https://127.0.0.1:2379"
+   listen_peer_urls: "https://{{ ip_address }}:2380"
 {% else %}
-   advertise_client_urls: "http://{PRIVATE_IPV4}:2379"
-   initial_advertise_peer_urls: "http://{PRIVATE_IPV4}:2380"
-   listen_client_urls: "http://{PRIVATE_IPV4}:2379,http://127.0.0.1:2379"
-   listen_peer_urls: "http://{PRIVATE_IPV4}:2380"
+   advertise_client_urls: "https://{PRIVATE_IPV4}:2379"
+   initial_advertise_peer_urls: "https://{PRIVATE_IPV4}:2380"
+   listen_client_urls: "https://{PRIVATE_IPV4}:2379,https://127.0.0.1:2379"
+   listen_peer_urls: "https://{PRIVATE_IPV4}:2380"
 {% endif %}
-
-locksmith:
-    reboot_strategy: "etcd-lock"
-    etcd_endpoints:  "http://localhost:2379"
 {% else %}
 locksmith:
   reboot_strategy: "reboot"
 {%- endif %}
 
-{%- if nfs_mounts %}
+{%- if nfs_mounts or create_cluster %}
 systemd:
   units:
+{%- if create_cluster %}
+  - name: flanneld.service
+    dropins:
+      - name: 50-network-config.conf
+        contents: |
+          Environment="ETCD_SSL_DIR=/etc/ssl/certs"
+  - name: locksmithd.service
+    dropins:
+      - name: 20-locksmithd-config.conf
+        contents: |
+          [Service]
+          Environment="LOCKSMITHD_ETCD_CAFILE=/etc/ssl/certs/ca.pem"
+          Environment="LOCKSMITHD_ETCD_CERTFILE=/etc/ssl/certs/kubernetes.pem"
+          Environment="LOCKSMITHD_ETCD_KEYFILE=/etc/ssl/certs/kubernetes-key.pem"
+          Environment="LOCKSMITHD_ENDPOINT=https://127.0.0.1:2379"
+{%- endif %}
 {%- for current_mount in nfs_mounts %}
     - name: {{ current_mount['name'] }}.mount
       enable: true

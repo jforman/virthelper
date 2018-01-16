@@ -8,12 +8,14 @@ virtbuilder is a helpful wrapper script that makes creating virtual machines man
 * Ubuntu and Debian installs without needing to download an ISO locally.
 * CoreOS support with ability to provide with a templated Container Linux config file.
 * CoreOS etcd-based cluster support using CoreOS public Discovery service.
-* Listing disk pools and volumes in those pools.
+* Secure etcd-client configuration for flannel.
+* Listing disk pools and volumes in those libvirt disk pools.
 
 Supported types of virtual machines that can be created:
 * CoreOS
-* Ubuntu
 * Debian
+* Ubuntu
+
 
 ## Assumptions
 
@@ -78,10 +80,22 @@ If you want to tie your CoreOS VMs together into an etcd-based cluster the follo
 * cluster_size: an integer for the number of CoreOS hosts to create.
 * coreos_create_cluster: No value here is needed. This is used to tell the script to retrieve an etcd Discovery URL token used for all hosts.
 
+**NOTE: etcd clustering is configured to use secure communications (https) with
+self signed certificates.**
+
+Certificates are expected to live in */etc/ssl/certs* hostname_with_index
+
+* CA: ca.pem
+* Client Certificate: etcd-client.pem
+* Client Key: etcd-client-key.pem
+
 ```
 vmbuilder.py \
 --bridge_interface ${vm_host_iface} --disk_pool_name localdump --host_name ${base_name} --vm_type coreos --domain_name ${vm_domainname} --coreos_create_cluster --cluster_size ${cluster_size} create_vm
 ```
+
+_TODO: Add support for en/disabling secure transport for etcd from command line._
+_TODO: Add support for configuring SSL certificate directory from command line._
 
 ### A three-VM CoreOS cluster using static IP addressing for each CoreOS node.
 
@@ -99,7 +113,7 @@ An NFS mount stanza can be added to your cloud config file with the following fl
 ```
 --coreos_nfs_mount allmyfiles1:/foo/bar
 
-The NFS directory of the remote server will be mounted on your CoreOS VM at /foo/bar. 
+The NFS directory of the remote server will be mounted on your CoreOS VM at /foo/bar.
 ```
 
 ## Notes
