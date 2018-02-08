@@ -45,17 +45,17 @@ locksmith:
 flannel:
   network_config: '{ "Network": "{{ cluster_overlay_network }}" }'
   etcd_cafile: /etc/ssl/certs/ca.pem
-  etcd_certfile: /etc/ssl/certs/kubernetes.pem
-  etcd_keyfile: /etc/ssl/certs/kubernetes-key.pem
+  etcd_certfile: /etc/ssl/certs/{{vm_name}}-etcd.pem
+  etcd_keyfile: /etc/ssl/certs/{{vm_name}}-etcd-key.pem
   etcd_endpoints: "https://127.0.0.1:2379"
 
 etcd:
    name: "{{ vm_name }}"
    discovery: "{{ discovery_url }}"
-   cert_file: "/etc/ssl/certs/kubernetes.pem"
-   key_file: "/etc/ssl/certs/kubernetes-key.pem"
-   peer_cert_file: "/etc/ssl/certs/kubernetes.pem"
-   peer_key_file: "/etc/ssl/certs/kubernetes-key.pem"
+   cert_file: "/etc/ssl/certs/{{vm_name}}-etcd.pem"
+   key_file: "/etc/ssl/certs/{{vm_name}}-etcd-key.pem"
+   peer_cert_file: "/etc/ssl/certs/{{vm_name}}-etcd.pem"
+   peer_key_file: "/etc/ssl/certs/{{vm_name}}-etcd-key.pem"
    trusted_ca_file: "/etc/ssl/certs/ca.pem"
    peer_trusted_ca_file: "/etc/ssl/certs/ca.pem"
    peer_client_cert_auth: true
@@ -91,8 +91,8 @@ systemd:
         contents: |
           [Service]
           Environment="LOCKSMITHD_ETCD_CAFILE=/etc/ssl/certs/ca.pem"
-          Environment="LOCKSMITHD_ETCD_CERTFILE=/etc/ssl/certs/kubernetes.pem"
-          Environment="LOCKSMITHD_ETCD_KEYFILE=/etc/ssl/certs/kubernetes-key.pem"
+          Environment="LOCKSMITHD_ETCD_CERTFILE=/etc/ssl/certs/{{vm_name}}-etcd.pem"
+          Environment="LOCKSMITHD_ETCD_KEYFILE=/etc/ssl/certs/{{vm_name}}-etcd-key.pem"
           Environment="LOCKSMITHD_ENDPOINT=https://127.0.0.1:2379"
 {%- endif %}
 {%- for current_mount in nfs_mounts %}
