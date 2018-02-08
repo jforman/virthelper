@@ -76,10 +76,41 @@ locksmith:
   reboot_strategy: "reboot"
 {%- endif %}
 
-{%- if nfs_mounts or create_cluster %}
 systemd:
   units:
+  - name: rkt-api.service
+    enable: true
+    contents: |
+      [Unit]
+      Description=rkt api service
+      Documentation=http://github.com/rkt/rkt
+      After=network.target rkt-api-tcp.socket
+      Requires=rkt-api-tcp.socket
+
+      [Service]
+      ExecStart=/usr/bin/rkt api-service
+
+      [Install]
+      WantedBy=multi-user.target
+
+  - name: rkt-api-tcp.socket
+    enable: true
+    contents: |
+      [Unit]
+      Description=rkt api service socket
+      PartOf=rkt-api.service
+
+      [Socket]
+      ListenStream=127.0.0.1:15441
+      ListenStream=[::1]:15441
+      Service=rkt-api.service
+      BindIPv6Only=both
+
+      [Install]
+      WantedBy=sockets.target
+
 {%- if create_cluster %}
+{%- if nfs_mounts or create_cluster %}
   - name: flanneld.service
     dropins:
       - name: 50-network-config.conf
