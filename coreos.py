@@ -171,6 +171,7 @@ class CoreOS(vmtypes.BaseVM):
         command_line.extend(["-b",
                              self.getUnCompressedLocalSnapshotImagePath()])
         command_line.extend([self.getVmDiskImagePath()])
+        command_line.extend(["%dG" % self.getDiskSize()])
         logging.debug("qemu-img command line: %s", " ".join(command_line))
         commands.extend([command_line])
 
