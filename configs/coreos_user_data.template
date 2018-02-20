@@ -4,6 +4,12 @@ storage:
     filesystem: root
     contents:
       inline: {{ vm_name }}
+  - path: /etc/kubernetes_docker_cni.env
+    filesystem: root
+    contents:
+      inline: |
+        DOCKER_OPT_BIP=""
+        DOCKER_OPT_IPMASQ=""
 
 passwd:
   users:
@@ -108,6 +114,14 @@ systemd:
 
       [Install]
       WantedBy=sockets.target
+
+  - name: docker.service
+    enable: true
+    dropins:
+      - name: 10-docker_cni.conf
+        contents: |
+          [Service]
+          EnvironmentFile=-/etc/kubernetes_docker_cni.env
 
 {%- if create_cluster %}
 {%- if nfs_mounts or create_cluster %}
