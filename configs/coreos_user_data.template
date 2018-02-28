@@ -4,12 +4,6 @@ storage:
     filesystem: root
     contents:
       inline: {{ vm_name }}
-  - path: /etc/kubernetes_docker_cni.env
-    filesystem: root
-    contents:
-      inline: |
-        DOCKER_OPT_BIP=""
-        DOCKER_OPT_IPMASQ=""
 
 passwd:
   users:
@@ -48,13 +42,6 @@ can be removed and PRIVATE_IPV4 can be the default all the time.
 locksmith:
     reboot_strategy: "etcd-lock"
 
-flannel:
-  network_config: '{ "Network": "{{ cluster_overlay_network }}" }'
-  etcd_cafile: /etc/ssl/certs/ca.pem
-  etcd_certfile: /etc/ssl/certs/{{vm_name}}-etcd.pem
-  etcd_keyfile: /etc/ssl/certs/{{vm_name}}-etcd-key.pem
-  etcd_endpoints: "https://127.0.0.1:2379"
-
 etcd:
    name: "{{ vm_name }}"
    discovery: "{{ discovery_url }}"
@@ -84,6 +71,8 @@ locksmith:
 
 systemd:
   units:
+  - name: flanneld.service
+    mask: true
   - name: rkt-api.service
     enable: true
     contents: |
@@ -115,21 +104,8 @@ systemd:
       [Install]
       WantedBy=sockets.target
 
-  - name: docker.service
-    enable: true
-    dropins:
-      - name: 10-docker_cni.conf
-        contents: |
-          [Service]
-          EnvironmentFile=-/etc/kubernetes_docker_cni.env
-
 {%- if create_cluster %}
 {%- if nfs_mounts or create_cluster %}
-  - name: flanneld.service
-    dropins:
-      - name: 50-network-config.conf
-        contents: |
-          Environment="ETCD_SSL_DIR=/etc/ssl/certs"
   - name: locksmithd.service
     dropins:
       - name: 20-locksmithd-config.conf
