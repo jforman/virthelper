@@ -277,7 +277,10 @@ class VMBuilder(object):
     @classmethod
     def parseArgs(cls):
         """Parse and return command line flags."""
-        parser = argparse.ArgumentParser()
+        parser = argparse.ArgumentParser(
+            description="Building libvirt virtual machines, made easy.",
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        )
         commands = parser.add_argument_group('commands')
         commands.add_argument('command',
                               type=str,
