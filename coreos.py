@@ -36,6 +36,10 @@ class CoreOS(vmtypes.BaseVM):
         """Return absolute local path of uncompressed CoreOS snapshot image."""
         return self.getCompressedLocalSnapshotImagePath().rstrip(".bz2")
 
+    def getCoreosCertsDir(self):
+        """"Return absolute directory path for SSL certs."""
+        return self.args.coreos_ssl_certs_dir
+
     def getCoreosConfigBasePath(self):
         """Return absolute directory path for configs for CoreOS hosts."""
         return os.path.join(self.getDiskPoolPath(), "coreos")
@@ -394,6 +398,7 @@ class CoreOS(vmtypes.BaseVM):
             'ssh_keys': self.getSshKey(),
             'ip_address': '"{"PRIVATE_IPV4"}""',
             'vm_name': self.getVmName(),
+            'ssl_certs_dir': self.getCoreosCertsDir(),
         }
 
         if self.getNfsMounts():

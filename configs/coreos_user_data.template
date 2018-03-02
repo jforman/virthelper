@@ -45,12 +45,12 @@ locksmith:
 etcd:
    name: "{{ vm_name }}"
    discovery: "{{ discovery_url }}"
-   cert_file: "/etc/ssl/certs/{{vm_name}}-etcd.pem"
-   key_file: "/etc/ssl/certs/{{vm_name}}-etcd-key.pem"
-   peer_cert_file: "/etc/ssl/certs/{{vm_name}}-etcd.pem"
-   peer_key_file: "/etc/ssl/certs/{{vm_name}}-etcd-key.pem"
-   trusted_ca_file: "/etc/ssl/certs/ca.pem"
-   peer_trusted_ca_file: "/etc/ssl/certs/ca.pem"
+   cert_file: "{{ ssl_certs_dir }}/{{vm_name}}-etcd.pem"
+   key_file: "{{ ssl_certs_dir }}/{{vm_name}}-etcd-key.pem"
+   peer_cert_file: "{{ ssl_certs_dir }}/{{vm_name}}-etcd.pem"
+   peer_key_file: "{{ ssl_certs_dir }}/{{vm_name}}-etcd-key.pem"
+   trusted_ca_file: "{{ ssl_certs_dir }}/ca.pem"
+   peer_trusted_ca_file: "{{ ssl_certs_dir }}/ca.pem"
    peer_client_cert_auth: true
    client_cert_auth: true
 {%- if static_network %}
@@ -111,9 +111,9 @@ systemd:
       - name: 20-locksmithd-config.conf
         contents: |
           [Service]
-          Environment="LOCKSMITHD_ETCD_CAFILE=/etc/ssl/certs/ca.pem"
-          Environment="LOCKSMITHD_ETCD_CERTFILE=/etc/ssl/certs/{{vm_name}}-etcd.pem"
-          Environment="LOCKSMITHD_ETCD_KEYFILE=/etc/ssl/certs/{{vm_name}}-etcd-key.pem"
+          Environment="LOCKSMITHD_ETCD_CAFILE={{ ssl_certs_dir }}/ca.pem"
+          Environment="LOCKSMITHD_ETCD_CERTFILE={{ ssl_certs_dir }}/{{vm_name}}-etcd.pem"
+          Environment="LOCKSMITHD_ETCD_KEYFILE={{ ssl_certs_dir }}/{{vm_name}}-etcd-key.pem"
           Environment="LOCKSMITHD_ENDPOINT=https://127.0.0.1:2379"
 {%- endif %}
 {%- for current_mount in nfs_mounts %}

@@ -349,6 +349,10 @@ class VMBuilder(object):
                                   "Default: %(default)s"))
 
         coreos_args = parser.add_argument_group('coreos vm properties')
+        coreos_args.add_argument("--coreos_ssl_certs_dir",
+                                 default="/etc/ssl/certs",
+                                 help=("Path for storing SSL certs on "
+                                       "CoreOS host."))
         coreos_args.add_argument("--coreos_channel",
                                  choices=["stable", "beta", "alpha"],
                                  default="stable",
