@@ -394,10 +394,10 @@ class VMBuilder(object):
         debian_args.add_argument("--preseed_url",
                                  help="URL of Debian-based OS install preseed file.")
         debian_args.add_argument("--debian_release",
-                                 default="jessie",
+                                 default="stretch",
                                  help="Debian OS release to install. Default: %(default)s.")
         debian_args.add_argument("--ubuntu_release",
-                                 default="xenial",
+                                 default="artful",
                                  help="Ubuntu OS release to install. Default: %(default)s")
         debian_args.add_argument("--dist_mirror",
                                  help="Installation Mirror. Default: %(default)s",
