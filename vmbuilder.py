@@ -316,6 +316,9 @@ class VMBuilder(object):
                               help="Type of VM to create.")
         vm_props.add_argument("--host_name",
                               help="Virtual Machine Base Hostname")
+        vm_props.add_argument("--use_uefi",
+                              action="store_true",
+                              help="Enable UEFI support during boot.")
 
         network_props = parser.add_argument_group('network properties')
         network_props.add_argument("--ip_address",
@@ -533,6 +536,9 @@ class VMBuilder(object):
             "ram": self.getRam(),
             "vcpus": self.getCpus(),
         }
+
+        if self.args.use_uefi:
+            flags.update({"boot": "uefi"})
 
         virt_install_custom_flags = self.getBuild().getVirtInstallCustomFlags()
         if virt_install_custom_flags:
