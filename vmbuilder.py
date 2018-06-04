@@ -288,6 +288,23 @@ class VMBuilder(object):
                                        'list_disk_pools',
                                        'list_network_interfaces',
                                        'list_pool_volumes'])
+
+        parser.add_argument("--debug",
+                            action="store_true",
+                            help="Display debug output.")
+        parser.add_argument("--deleteifexists",
+                            action="store_true",
+                            help="Delete VM data if it exists.")
+        parser.add_argument("--dry_run",
+                            action="store_true",
+                            help=("Don't execute anything, just print out "
+                                  "what would have been done."))
+        parser.add_argument("--cluster_size",
+                            default=1,
+                            type=int,
+                            help=("Create a number of VM instances. "
+                                  "Default: %(default)s"))
+
         vm_props = parser.add_argument_group('vm properties')
         vm_props.add_argument("--bridge_interface",
                               help=("NIC/VLAN to bridge."
@@ -337,22 +354,6 @@ class VMBuilder(object):
         vm_host_props.add_argument("--vm_host",
                                    default="localhost",
                                    help="VM host. Default: %(default)s")
-
-        parser.add_argument("--debug",
-                            action="store_true",
-                            help="Display debug output.")
-        parser.add_argument("--deleteifexists",
-                            action="store_true",
-                            help="Delete VM data if it exists.")
-        parser.add_argument("--dry_run",
-                            action="store_true",
-                            help=("Don't execute anything, just print out "
-                                  "what would have been done."))
-        parser.add_argument("--cluster_size",
-                            default=1,
-                            type=int,
-                            help=("Create a number of VM instances. "
-                                  "Default: %(default)s"))
 
         coreos_args = parser.add_argument_group('coreos vm properties')
         coreos_args.add_argument("--coreos_ssl_certs_dir",
