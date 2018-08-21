@@ -1,0 +1,17 @@
+#cloud-config
+chpasswd: { expire: False }
+
+package_update: true
+package_upgrade: true
+packages:
+  - iputils-ping
+
+runcmd:
+  - touch /etc/cloud/cloud-init.disabled
+
+ssh_authorized_keys:
+{%- for key in ssh_keys %}
+  - "{{ key }}"
+{%- endfor %}
+
+ssh_pwauth: True
