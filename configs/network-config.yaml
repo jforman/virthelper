@@ -1,0 +1,8 @@
+version: 2
+ethernets:
+  ens2:
+    addresses:
+      - {{ ip_address }}/{{ network_prefixlen }}
+    gateway4: {{ gateway }}
+    nameservers:
+      addresses: [{%- for current_dns in dns %}{{current_dns}},{% endfor %}]

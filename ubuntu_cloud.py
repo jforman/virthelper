@@ -18,6 +18,7 @@ class UbuntuCloud(vmtypes.BaseVM):
     """Ubuntu-Cloud specific configuration."""
 
     name = "UbuntuCloud"
+    static_network_configured = False
 
     def __init__(self):
         super(UbuntuCloud, self).__init__()
@@ -30,6 +31,7 @@ class UbuntuCloud(vmtypes.BaseVM):
         # TODO: write network config data out.
         self.writeUserData()
         self.writeMetaData()
+        self.writeNetworkConfigData()
         self.createGoldenUbuntuCloudImage()
         self.createVmSeedImage()
 
@@ -111,6 +113,57 @@ class UbuntuCloud(vmtypes.BaseVM):
             logging.info("Creating VM directory: %s.", self.getVmDirectory())
             os.mkdir(self.getVmDirectory())
 
+    def writeNetworkConfigData(self):
+        """write the cloud-config network config data file file."""
+        # if network config data is true, add the flag and file to
+        # cloud-localds run.
+
+        def render(template_file, context):
+            """Function to fill in variables in jinja2 template file."""
+            path, filename = os.path.split(template_file)
+            return jinja2.Environment(
+                loader=jinja2.FileSystemLoader(path)
+                ).get_template(filename).render(context)
+
+        logging.debug("Checking if static networking is enabled.")
+        static_network = all([
+            self.getIPAddress(),
+            self.getNetmask(),
+            self.getGateway()])
+
+        network_config_vars = {}
+
+        logging.debug("Is static network configured? %s.", static_network)
+
+        if static_network:
+            UbuntuCloud.static_network_configured = True
+            network_config_vars.update({
+                'static_network': True,
+                'dns': self.getNameserver(),
+                'gateway': self.getGateway(),
+                'ip_address': self.getIPAddress(),
+                'network_prefixlen': self.getPrefixLength(
+                    self.getIPAddress(),
+                    self.getNetmask()),
+            })
+        else:
+            return
+
+        network_config_template = os.path.join(
+            self.getConfigsDir(),
+            "network-config.yaml")
+
+        template_rendered = render(network_config_template, network_config_vars)
+
+        logging.debug("Rendered network-config config: %s", template_rendered)
+
+        if self.args.dry_run:
+            logging.info("DRY RUN: Did not actually write network-config.")
+            return
+
+        with open(os.path.join(self.getVmDirectory(), "network-config"), "w") as cc:
+            cc.write(template_rendered)
+
     def writeUserData(self):
         """write the cloud-config user-data file."""
 
@@ -172,12 +225,26 @@ class UbuntuCloud(vmtypes.BaseVM):
 
     def createVmSeedImage(self):
         """create VM seed image containing user/meta data."""
-        # TODO: Add network config
+
         logging.info("Writing VM seed image with user and meta data.")
-        command_line = ["/usr/bin/cloud-localds",
-                        self.getVmSeedImagePath(),
-                        os.path.join(self.getVmDirectory(), "user-data"),
-                        os.path.join(self.getVmDirectory(), "meta-data")]
+        if UbuntuCloud.static_network_configured:
+            # TODO: figure out a cleaner way to insert the network
+            # config flags as opposed to just copying the list twice.
+            command_line = ["/usr/bin/cloud-localds",
+                            "--network-config",
+                            os.path.join(self.getVmDirectory(),
+                                         "network-config"),
+                            self.getVmSeedImagePath(),
+                            os.path.join(self.getVmDirectory(), "user-data"),
+                            os.path.join(self.getVmDirectory(), "meta-data")]
+        else:
+            command_line = ["/usr/bin/cloud-localds",
+                            self.getVmSeedImagePath(),
+                            os.path.join(self.getVmDirectory(), "user-data"),
+                            os.path.join(self.getVmDirectory(), "meta-data")]
+
+
+        logging.debug("cloud-localds command line: %s", command_line)
         if self.args.dry_run:
             logging.info("DRY RUN. Would have run: %s.", command_line)
             return

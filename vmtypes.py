@@ -1,4 +1,5 @@
 """VM-specific configuration for using vmbuilder wrapper."""
+import ipaddress
 import logging
 import os
 import shutil
