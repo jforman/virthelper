@@ -15,3 +15,7 @@ ssh_authorized_keys:
 {%- endfor %}
 
 ssh_pwauth: True
+
+hostname: {{ hostname }}
+fqdn: {{ fqdn }}
+manage_etc_hosts: True

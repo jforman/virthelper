@@ -28,7 +28,6 @@ class UbuntuCloud(vmtypes.BaseVM):
         super(UbuntuCloud, self).normalizeVMState()
         self.downloadUbuntuCloudImage()
         self.createVmDirectory()
-        # TODO: write network config data out.
         self.writeUserData()
         self.writeMetaData()
         self.writeNetworkConfigData()
@@ -175,6 +174,8 @@ class UbuntuCloud(vmtypes.BaseVM):
                 ).get_template(filename).render(context)
 
         user_data_vars = {
+            'hostname': self.getVmHostName(),
+            'fqdn': self.getVmName(),
             'ssh_keys': self.getSshKey()
         }
 
