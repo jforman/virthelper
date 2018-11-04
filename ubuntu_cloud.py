@@ -11,7 +11,8 @@ import jinja2
 import vmtypes
 
 RELEASE_TO_VER = {
-    'bionic': '18.04'
+    'bionic': '18.04',
+    'cosmic': '18.10',
 }
 
 class UbuntuCloud(vmtypes.BaseVM):
