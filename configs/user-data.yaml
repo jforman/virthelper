@@ -4,7 +4,11 @@ chpasswd: { expire: False }
 package_update: true
 package_upgrade: true
 packages:
+  - conntrack
+  - ipset
   - iputils-ping
+  - socat
+
 
 runcmd:
   - touch /etc/cloud/cloud-init.disabled
