@@ -4,6 +4,7 @@ import logging
 import os
 import shutil
 import subprocess
+import sys
 import time
 import urllib
 
@@ -326,6 +327,8 @@ class VMBuilder(object):
         if not self.args.deleteifexists:
             logging.critical("VM image found for host, but --deleteifexists flag "
                           "not passed.")
+            sys.exit(1)
+
         self.getConn().storagePoolLookupByName(
             self.args.disk_pool_name).storageVolLookupByName(
                 self.getVmDiskImageName()).delete()
