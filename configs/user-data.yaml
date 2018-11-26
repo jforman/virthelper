@@ -3,8 +3,10 @@ chpasswd: { expire: False }
 
 package_update: true
 package_upgrade: true
+package_reboot_if_required: true
 packages:
   - conntrack
+  - emacs-nox
   - ipset
   - iputils-ping
   - socat
