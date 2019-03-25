@@ -1,4 +1,5 @@
 #cloud-config
+password: xKdqOAX4AiZ4g0Zcm7kH
 chpasswd: { expire: False }
 
 package_update: true
