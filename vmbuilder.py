@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 """A helpful wrapper for using libvirt to create virtual machines."""
 import argparse
 import logging
@@ -144,7 +144,7 @@ def parseArgs():
     network_args = [args.ip_address, args.nameserver, args.gateway, args.netmask]
     if any(network_args) and not all(network_args):
         logging.critical("To configure static networking, IP address, "
-                      "nameserver, netmask, and gateway are ALL required,")
+                         "nameserver, netmask, and gateway are ALL required,")
 
     return args
 
@@ -157,9 +157,9 @@ def main():
     vm = VMBuilder(args)
 
     if vm.args.command == 'list_disk_pools':
-        print vm.getDiskPools()
+        print(vm.getDiskPools())
     elif vm.args.command == 'list_pool_volumes':
-        print vm.getDiskPoolVolumes()
+        print(m.getDiskPoolVolumes())
     elif vm.args.command == 'create_vm':
         logging.debug("about to run vm.getbuild.createvm")
         vm.verifyMinimumCreateVMArgs()

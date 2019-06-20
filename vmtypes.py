@@ -6,7 +6,7 @@ import shutil
 import subprocess
 import sys
 import time
-import urllib
+from urllib.parse import urlparse
 
 import libvirt
 from bs4 import BeautifulSoup
@@ -164,7 +164,7 @@ class VMBuilder(object):
             return VMBuilder.conn
 
         VMBuilder.conn = libvirt.open(
-            "qemu+ssh://%s/system" % self.args.vm_host)
+            f"qemu+ssh://{self.args.vm_host}/system")
         return VMBuilder.conn
 
     def getDiskPools(self):
@@ -186,19 +186,19 @@ class VMBuilder(object):
         try:
             output = subprocess.check_output(command_line,
                                              stderr=subprocess.STDOUT)
-            logging.debug("Command line %s; Output: %s", command_line, output)
+            logging.debug(f"Command line {command_line}; Output: {output}.")
         except subprocess.CalledProcessError as err:
-            logging.critical("Error in creating disk image: %s.", err.output)
+            logging.critical(f"Error in creating disk image: {err.output}.")
         soup = BeautifulSoup(output, "lxml")
         self.pool_path = soup.target.path.string
         return self.pool_path
 
     def getDiskPoolVolumes(self):
         """Return list of all volumes in specified disk pool."""
-        logging.debug("Getting volumes for pool %s.", self.getDiskPoolName())
+        logging.debug(f"Getting volumes for pool {self.getDiskPoolName()}.")
         volumes = [x.name() for x in self.getConn().storagePoolLookupByName(
             self.getDiskPoolName()).listAllVolumes()]
-        logging.debug("Volumes in pool %s: %s", self.getDiskPoolName(), volumes)
+        logging.debug(f"Volumes in pool {self.getDiskPoolName()}: {volumes}.")
         return volumes
 
     def getIPAddress(self):
@@ -214,31 +214,28 @@ class VMBuilder(object):
             return self.args.ip_address
 
         network = ipaddress.ip_network(
-            unicode('%s/%s' % (
-                self.args.ip_address,
-                self.getNetmask())),
+            f"{self.args.ip_address}/{self.getNetmask()}",
             strict=False)
 
-        logging.debug("Computed Network: %s", network)
+        logging.debug(f"Computed Network: {network}.")
         hosts = [x.exploded for x in network.hosts()]
         host_start_index = hosts.index(self.args.ip_address)
-        logging.debug("Host start index: %s, size: %s, cluster index: %s.",
-                      host_start_index, self.getClusterSize(),
-                      self.getClusterIndex())
+        logging.debug(f"Host start index: {host_start_index}, size: {self.getClusterSize()}, "
+                      f"cluster index: {self.getClusterIndex()}.")
         hosts_slice = hosts[
             host_start_index:host_start_index+self.getClusterSize()]
-        logging.debug("Slice of hosts: %s", hosts_slice)
+        logging.debug(f"Slice of hosts: {hosts_slice}.")
 
         # Subtract one from the list because the list is
         # zero-indexed, but the cluster index is not.
         ip_address = hosts_slice[self.getClusterIndex()]
-        logging.debug("Generated IP address: %s", ip_address)
+        logging.debug(f"Generated IP address: {ip_address}.")
         return ip_address
 
     def getPrefixLength(self, ip_address, netmask):
         """Given an IP address and netmask, return integer prefix length."""
-        composed_address = u"%s/%s" % (ip_address, netmask)
-        logging.debug("Determing network prefix length of %s.", composed_address)
+        composed_address = f"{ip_address}/{netmask}"
+        logging.debug(f"Determing network prefix length of {composed_address}.")
         return ipaddress.IPv4Network(composed_address, strict=False).prefixlen
 
     def getNameserver(self):
@@ -287,14 +284,15 @@ class VMBuilder(object):
         #  vol-create-as does not support providing a --connect flag
         #  (["--connect", "qemu+ssh://%s/system" % self.args.vm_host])
 
-        command_line = ["/usr/bin/virsh", "vol-create-as"]
-        command_line.extend(["--pool", self.getDiskPoolName()])
-        command_line.extend(["--name", self.getVmDiskImageName()])
-        command_line.extend(["--capacity", "%dG" % self.getDiskSize()])
-        command_line.extend(["--format", "qcow2"])
-        command_line.extend(["--prealloc-metadata"])
+        command_line = (
+            f"/usr/bin/virsh vol-create-as "
+            f"--pool {self.getDiskPoolName()} "
+            f"--name {self.getVmDiskImageName()} "
+            f"--capacity {self.GetDiskSize()}G "
+            f"--format qcow2 "
+            f"--prealloc-metadata")
 
-        logging.debug("Create disk image command line: %s", command_line)
+        logging.debug(f"Create disk image command line: {command_line}")
 
         if self.args.dry_run:
             logging.info("DRYRUN: No disk image was created.")
@@ -305,10 +303,10 @@ class VMBuilder(object):
             output = subprocess.check_output(command_line,
                                              stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as err:
-            logging.error("Error in creating disk image: %s.", err.output)
+            logging.error(f"Error in creating disk image: {err.output}.")
             raise
         logging.info("Disk image created successfully.")
-        logging.debug("Disk image creation output: %s", output)
+        logging.debug(f"Disk image creation output: {output}.")
 
     def deleteVMImage(self):
         """Delete a VM's disk image."""
@@ -317,9 +315,7 @@ class VMBuilder(object):
             logging.info("VM image does not exist for VM. Nothing to delete.")
             return
 
-        logging.info("Attempting to delete image in pool %s for vm %s.",
-                     self.getDiskPoolName(),
-                     self.getVmName())
+        logging.info(f"Attempting to delete image in pool {self.getDiskPoolName()} for vm {self.getVmName()}")
         if self.args.dry_run:
             logging.info("DRY RUN: Disk image not actually deleted.")
             return
@@ -360,11 +356,11 @@ class VMBuilder(object):
             self.getVmName())
         if os.path.exists(vm_dir):
             if self.args.dry_run:
-                logging.info("DRY RUN: Would have tried to delete VM "
-                             "directory: %s.", vm_dir)
+                logging.info(f"DRY RUN: Would have tried to delete VM "
+                             f"directory: {vm_dir}.")
                 return
 
-            logging.info("Attempting to delete VM directory: %s.", vm_dir)
+            logging.info(f"Attempting to delete VM directory: {vm_dir}.")
             shutil.rmtree(vm_dir)
 
     def normalizeVMState(self):
@@ -379,7 +375,7 @@ class VMBuilder(object):
 
     def checkValidMacAddress(self, mac_address, fatal=False):
         """Check if MAC address is valid. If fatal is true, raise exception."""
-        logging.debug("Verifying validity of MAC address: %s.", mac_address)
+        logging.debug(f"Verifying validity of MAC address: {mac_address}.")
         is_valid_mac = netaddr.valid_mac(mac_address)
         if is_valid_mac:
             logging.debug("Found valid MAC address.")
@@ -406,12 +402,10 @@ class VMBuilder(object):
             command_line.extend(["--noautoconsole"])
 
         flags = {
-            "connect": "qemu+ssh://%s/system" % self.getVmHost(),
-            "disk": ["vol=%s/%s,cache=none" % (self.getDiskPoolName(),
-                                              self.getVmDiskImageName())],
+            "connect": f"qemu+ssh://{self.getVmHost()}/system",
+            "disk": [f"vol={self.getDiskPoolName()}/{self.getVmDiskImageName},cache=none"],
             "name": self.getVmName(),
-            "network": "bridge=%s,model=virtio" % (
-                self.getNetworkBridgeInterface()),
+            "network": f"bridge={self.getNetworkBridgeInterface()},model=virtio",
             "os-type": "linux",
             "ram": self.getRam(),
             "vcpus": self.getCpus(),
@@ -436,7 +430,7 @@ class VMBuilder(object):
 
         # TODO: simplify this logic to see if we need to have multiples
         # of one flag.
-        for flag, values in flags.iteritems():
+        for flag, values in flags.items():
             if isinstance(values, list):
                 if len(values) > 1:
                     # multiple instances of an arg,
@@ -448,19 +442,17 @@ class VMBuilder(object):
             else:
                 command_line.extend(["--%s" % flag, str(values)])
 
-            logging.debug("flag: %s, value: %s",
-                          flag, values)
+            logging.debug(f"flag: {flag}, value: {values}")
 
         str_command_line = " ".join(command_line)
 
         final_args = self.getBuild().getVirtInstallFinalArgs()
 
         if final_args:
-            logging.info("Adding final arguments to virt-install: %s",
-                         final_args)
+            logging.info(f"Adding final arguments to virt-install: {final_args}.")
             str_command_line = str_command_line + " " + final_args
 
-        logging.debug("virt-install command line: %s", str_command_line)
+        logging.debug(f"virt-install command line: {str_command_line}")
 
         self.getBuild().executePreVirtInstall()
 
@@ -486,17 +478,17 @@ class VMBuilder(object):
 
         for cluster_index in range(0, self.getClusterSize()):
             self.setClusterIndex(cluster_index)
-            logging.debug("Starting to build host %s.", self.getClusterIndex())
+            logging.debug(f"Starting to build host {self.getClusterIndex()}.")
             self.setVmHostName(self.getVmHostNameArg(), self.getClusterIndex(),
                                self.getClusterSize())
-            logging.info("Starting VM build for %s", self.getVmName())
-            logging.info("Creating instance %s of cluster with %d "
-                         "instances.", self.getVmName(), self.args.cluster_size)
+            logging.info(f"Starting VM build for {self.getVmName()}.")
+            logging.info(f"Creating instance {self.getVmName()} of cluster with {self.args.cluster_size} "
+                         f"instances.")
 
             self.normalizeVMState()
             self.createDiskImage()
             self.executeVirtInstall()
-            logging.info("VM %s creation is complete.", self.getVmName())
+            logging.info(f"VM {self.getVmName()} creation is complete.")
 
     def verifyMinimumCreateVMArgs(self):
         """Verify that list of minimum args to create a VM were passed."""
@@ -507,9 +499,10 @@ class VMBuilder(object):
             self.args.vm_type,
             self.args.host_name,
         ]):
-            logging.critical("Missing critical arguments. Arguments considered "
-                          "critical: bridge_interface, domain_name, disk_pool, "
-                          "vm_type, host_name")
+            logging.critical(
+                "Missing critical arguments. Arguments considered "
+                "critical: bridge_interface, domain_name, disk_pool, "
+                "vm_type, host_name")
 
 class BaseVM(VMBuilder):
     """Base class for all VM types."""
@@ -563,8 +556,7 @@ class Debian(BaseVM):
         elif self.getVmType() == "ubuntu":
             os_release = self.getUbuntuRelease()
 
-        return "http://%s/%s/dists/%s/main/installer-amd64" % (
-            self.getDistMirror(), self.getVmType(), os_release)
+        return f"https://{self.getDistMirror()}/{self.getVmType()}/dists/{os_release}/main/installer-amd64"
 
     def getVirtInstallCustomFlags(self):
         """Return dict of OS-type specific virt-install flags."""

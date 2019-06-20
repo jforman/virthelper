@@ -4,7 +4,7 @@ import os
 import subprocess
 import urllib
 import uuid
-from urlparse import urljoin
+from urllib.parse import urlparse
 
 import jinja2
 
@@ -13,6 +13,7 @@ import vmtypes
 RELEASE_TO_VER = {
     'bionic': '18.04',
     'cosmic': '18.10',
+    'disco': '19.04',
 }
 
 class UbuntuCloud(vmtypes.BaseVM):
@@ -40,11 +41,11 @@ class UbuntuCloud(vmtypes.BaseVM):
 
     def getUbuntuReleaseImageFilename(self):
         """Release cloud-image file name."""
-        return "ubuntu-%s-minimal-cloudimg-amd64.img" % self.getUbuntuReleaseDatestamp()
+        return f"ubuntu-{self.getUbuntuReleaseDatestamp()}-minimal-cloudimg-amd64.img"
 
     def getReleaseImageDownloadPath(self):
         """remote url to download image file."""
-        return "http://cloud-images.ubuntu.com/minimal/releases/%s/release/ubuntu-%s-minimal-cloudimg-amd64.img" % (self.getUbuntuRelease(),  self.getUbuntuReleaseDatestamp())
+        return f"https://cloud-images.ubuntu.com/minimal/releases/{self.getUbuntuRelease()}/release/ubuntu-{self.getUbuntuReleaseDatestamp()}-minimal-cloudimg-amd64.img"
 
     def getReleaseImagePath(self):
         return os.path.join(
@@ -61,7 +62,7 @@ class UbuntuCloud(vmtypes.BaseVM):
         """return on-disk path of distro golden image file."""
         return os.path.join(
             self.getDiskPoolPath(),
-            "ubuntu-%s-minimal-cloudimg-amd64-golden.img" % self.getUbuntuReleaseDatestamp())
+            f"ubuntu-{self.getUbuntuReleaseDatestamp()}-minimal-cloudimg-amd64-golden.img")
 
     def createGoldenUbuntuCloudImage(self):
         """create golden ubuntu cloud image to be used for installs."""
@@ -79,23 +80,20 @@ class UbuntuCloud(vmtypes.BaseVM):
         try:
             output = subprocess.check_output(command_line,
                 stderr=subprocess.STDOUT)
-            logging.debug("Command line %s; Output: %s", command_line, output)
+            logging.debug(f"Command line {command_line}; Output: {output}")
         except subprocess.CalledProcessError as err:
-            logging.critical("Error in creating image: %s.", err.output)
+            logging.critical(f"Error in creating image: {err.output}.")
 
     def downloadUbuntuCloudImage(self):
         """Download Ubuntu cloud image for specificed release."""
-        logging.info("Attempting to download %s to %s",
-            self.getUbuntuReleaseImageFilename(),
-            self.getReleaseImagePath())
+        logging.info(f"Attempting to download {self.getUbuntuReleaseImageFilename()} to {self.getReleaseImagePath()}.")
         if os.path.exists(self.getReleaseImagePath()):
             logging.info("Image already downloaded. Skipping.")
             return
 
         if self.args.dry_run:
-            logging.info("DRY RUN: Would have retrieved new image %s from %s.",
-                         self.getUbuntuReleaseImageFilename(),
-                         self.getReleaseImageDownloadPath())
+            logging.info(f"DRY RUN: Would have retrieved new image {self.getUbuntuReleaseImageFilename()} "
+                         f"from {self.getReleaseImageDownloadPath()}.")
             return
         logging.info("Beginning download of Ubuntu cloud image.")
         urllib.urlretrieve(
@@ -107,10 +105,10 @@ class UbuntuCloud(vmtypes.BaseVM):
         """create a host-specific vm-store directory."""
         if not os.path.exists(self.getVmDirectory()):
             if self.args.dry_run:
-                logging.info("DRY RUN: Would have created created VM "
-                             "directory: %s.", self.getVmDirectory())
+                logging.info(f"DRY RUN: Would have created created VM "
+                             f"directory: {self.getVmDirectory()}.")
                 return
-            logging.info("Creating VM directory: %s.", self.getVmDirectory())
+            logging.info(f"Creating VM directory: {self.getVmDirectory()}.")
             os.mkdir(self.getVmDirectory())
 
     def writeNetworkConfigData(self):
@@ -133,7 +131,7 @@ class UbuntuCloud(vmtypes.BaseVM):
 
         network_config_vars = {}
 
-        logging.debug("Is static network configured? %s.", static_network)
+        logging.debug(f"Is static network configured? {static_network}.")
 
         if static_network:
             UbuntuCloud.static_network_configured = True
@@ -155,7 +153,7 @@ class UbuntuCloud(vmtypes.BaseVM):
 
         template_rendered = render(network_config_template, network_config_vars)
 
-        logging.debug("Rendered network-config config: %s", template_rendered)
+        logging.debug(f"Rendered network-config config: {template_rendered}")
 
         if self.args.dry_run:
             logging.info("DRY RUN: Did not actually write network-config.")
@@ -186,7 +184,7 @@ class UbuntuCloud(vmtypes.BaseVM):
 
         template_rendered = render(user_data_template, user_data_vars)
 
-        logging.debug("Rendered user-data config: %s", template_rendered)
+        logging.debug(f"Rendered user-data config: {template_rendered}")
 
         if self.args.dry_run:
             logging.info("DRY RUN: Did not actually write user-data.")
@@ -216,8 +214,8 @@ class UbuntuCloud(vmtypes.BaseVM):
 
         template_rendered = render(meta_data_template, meta_data_vars)
 
-        logging.debug("Rendered meta-data config: %s", template_rendered)
-
+        logging.debug(f"Rendered meta-data config: {template_rendered}")
+        
         if self.args.dry_run:
             logging.info("DRY RUN: Did not actually write meta-data.")
             return
@@ -246,14 +244,15 @@ class UbuntuCloud(vmtypes.BaseVM):
                             os.path.join(self.getVmDirectory(), "meta-data")]
 
 
-        logging.debug("cloud-localds command line: %s", command_line)
+        logging.debug(f"cloud-localds command line: {command_line}")
+
         if self.args.dry_run:
-            logging.info("DRY RUN. Would have run: %s.", command_line)
+            logging.info(f"DRY RUN. Would have run: {command_line}.")
             return
         try:
             output = subprocess.check_output(command_line,
                 stderr=subprocess.STDOUT)
-            logging.debug("Command line %s; Output: %s", command_line, output)
+            logging.debug(f"Command line {command_line}; Output: {output}")
         except subprocess.CalledProcessError as err:
             logging.critical("Error in creating image: %s.", err.output)
 
@@ -294,14 +293,13 @@ class UbuntuCloud(vmtypes.BaseVM):
                 output = subprocess.check_output(current,
                                                  stderr=subprocess.STDOUT)
                 logging.info("Disk image created successfully.")
-                logging.debug("Disk image creation output: %s", output)
+                logging.debug(f"Disk image creation output: {output}.")
         except subprocess.CalledProcessError as err:
-            logging.critical("Error in creating disk image: %s.", err.output)
+            logging.critical(f"Error in creating disk image: {err.output}.")
 
     def getVirtInstallCustomFlags(self):
         return {
-            'disk': ["vol=%s/%s,cache=none,bus=virtio" % (self.getDiskPoolName(),
-                                              self.getVmDiskImageName()),
-                    "%s,cache=none,bus=virtio" % (self.getVmSeedImagePath())],
+            'disk': [f"vol={self.getDiskPoolName()}/{self.getVmDiskImageName()},cache=none,bus=virtio",
+                     f"{self.getVmSeedImagePath()},cache=none,bus=virtio"],
             'boot': 'hd',
         }
