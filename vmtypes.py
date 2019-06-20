@@ -468,9 +468,16 @@ class VMBuilder(object):
             logging.info("DRYRUN: VM not actually created. Skipping.")
             return
 
-        subprocess.call(str_command_line,
-                        stderr=subprocess.STDOUT,
-                        shell=True)
+        returncode = subprocess.call(
+            str_command_line,
+            stderr=subprocess.STDOUT,
+            shell=True)
+
+        logging.debug(f"virt-install returncode: {returncode}.")
+
+        if returncode != 0:
+            logging.exception("non-zero returncode from virt-install execution. exiting.")
+            raise
 
         self.getBuild().executePostVirtInstall()
 
