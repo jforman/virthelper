@@ -5,6 +5,7 @@ import subprocess
 import urllib
 import uuid
 from urllib.parse import urlparse
+import urllib.request
 
 import jinja2
 
@@ -96,7 +97,7 @@ class UbuntuCloud(vmtypes.BaseVM):
                          f"from {self.getReleaseImageDownloadPath()}.")
             return
         logging.info("Beginning download of Ubuntu cloud image.")
-        urllib.urlretrieve(
+        urllib.request.urlretrieve(
             self.getReleaseImageDownloadPath(),
             self.getReleaseImagePath())
         logging.info("Finished downloading Ubuntu cloud image.")

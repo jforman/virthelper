@@ -6,15 +6,19 @@ package_update: true
 package_upgrade: true
 package_reboot_if_required: true
 packages:
+  - apt-transport-https
   - conntrack
-  - emacs-nox
+  - curl
   - ipset
   - iputils-ping
+  - less
   - socat
-
+  - vim
 
 runcmd:
   - touch /etc/cloud/cloud-init.disabled
+  - modprobe br_netfilter
+  - modprobe overlay
 
 ssh_authorized_keys:
 {%- for key in ssh_keys %}
@@ -27,3 +31,22 @@ hostname: {{ hostname }}
 fqdn: {{ fqdn }}
 manage_etc_hosts: True
 final_message: "The system is up after $UPTIME seconds"
+
+users:
+  - default
+  - name: cloudy
+    gecos: Cloud NonRoot Role User
+    uid: "9001"
+
+
+write_files:
+  - path: /etc/modules-load.d/br-netfilter.conf
+    content: |
+      # Automatically load br_netfilter at system startup
+      br_netfilter
+    permissions: '0644'
+  - path: /etc/modules-load.d/overlay.conf
+    content: |
+      # Automatically load overlay at system startup
+      overlay
+    permissions: '0644'
