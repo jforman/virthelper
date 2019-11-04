@@ -29,6 +29,7 @@ class UbuntuCloud(vmtypes.BaseVM):
     def normalizeVMState(self):
         """get VM images in a state ready to be installed."""
         super(UbuntuCloud, self).normalizeVMState()
+        self.deleteVMDirectory()
         self.downloadUbuntuCloudImage()
         self.createVmDirectory()
         self.writeUserData()

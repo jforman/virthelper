@@ -337,7 +337,7 @@ class VMBuilder(object):
             return
 
         if self.getVmName() not in self.getDefinedVMs():
-            logging.info("VM does not already exist.")
+            logging.info("VM does not already exist. No VM to delete.")
             return
 
         logging.info("Found existing VM with same name.")
@@ -354,14 +354,20 @@ class VMBuilder(object):
         vm_dir = os.path.join(
             self.getDiskPoolPath(),
             self.getVmName())
-        if os.path.exists(vm_dir):
-            if self.args.dry_run:
-                logging.info(f"DRY RUN: Would have tried to delete VM "
-                             f"directory: {vm_dir}.")
-                return
 
-            logging.info(f"Attempting to delete VM directory: {vm_dir}.")
-            shutil.rmtree(vm_dir)
+        if self.args.dry_run:
+            logging.info(f"DRY RUN: Would have tried to delete VM data directory: {vm_dir}.")
+            return
+
+        if not os.path.exists(vm_dir):
+            logging.info(f"VM data directory {vm_dir} not found. Nothing to delete.")
+            return
+
+        if not self.args.deleteifexists:
+            logging.fatal("VM directory found, but --deleteifexists flag not passed.")
+
+        logging.info(f"Attempting to delete VM directory: {vm_dir}.")
+        shutil.rmtree(vm_dir)
 
     def normalizeVMState(self):
         """Delete pre-existing VM and disk image if desired.
