@@ -13,6 +13,8 @@ packages:
   - iputils-ping
   - less
   - socat
+  - libnss-ldap
+  - libpam-ldap
   - vim
 
 runcmd:
