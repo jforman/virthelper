@@ -30,6 +30,7 @@ class UbuntuCloud(vmtypes.BaseVM):
         """get VM images in a state ready to be installed."""
         super(UbuntuCloud, self).normalizeVMState()
         self.deleteVMDirectory()
+        self.deleteVMSeedImage()
         self.downloadUbuntuCloudImage()
         self.createVmDirectory()
         self.writeUserData()
@@ -258,6 +259,19 @@ class UbuntuCloud(vmtypes.BaseVM):
         except subprocess.CalledProcessError as err:
             logging.critical("Error in creating image: %s.", err.output)
 
+    def deleteVMSeedImage(self):
+        """delete VM seed image."""
+        if self.args.dry_run:
+            logging.info(f"DRY RUN: Would have tried to delete seed image: {self.getVmSeedImagePath()}.")
+            return
+
+        if not os.path.exists(self.getVmSeedImagePath()):
+            logging.info("No seed image found to delete.")
+            return
+
+        logging.info(f"Deleting VM seed image: {self.getVmSeedImagePath()}.")
+        os.remove(self.getVmSeedImagePath())
+        logging.info("Done deleting VM seed image.")
 
     def createDiskImage(self):
         """Create a qcow2 disk image using Ubuntu Cloud golden image."""
