@@ -258,6 +258,7 @@ class UbuntuCloud(vmtypes.BaseVM):
             logging.debug(f"Command line {command_line}; Output: {output}")
         except subprocess.CalledProcessError as err:
             logging.critical("Error in creating image: %s.", err.output)
+            raise
 
     def deleteVMSeedImage(self):
         """delete VM seed image."""
