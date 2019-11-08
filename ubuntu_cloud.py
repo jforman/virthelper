@@ -178,7 +178,9 @@ class UbuntuCloud(vmtypes.BaseVM):
         user_data_vars = {
             'hostname': self.getVmHostName(),
             'fqdn': self.getVmName(),
-            'ssh_keys': self.getSshKey()
+            'ssh_keys': self.getSshKey(),
+            'ldap_uri': self.args.ldap_uri,
+            'ldap_basedn': self.args.ldap_basedn,
         }
 
         user_data_template = os.path.join(

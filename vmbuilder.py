@@ -69,6 +69,10 @@ def parseArgs():
     vm_props.add_argument("--use_uefi",
                           action="store_true",
                           help="Enable UEFI support during boot.")
+    vm_props.add_argument("--ldap_uri",
+                          help="URI for LDAP server.")
+    vm_props.add_argument("--ldap_basedn",
+                          help="LDAP base DN for user system authentication.")
 
     network_props = parser.add_argument_group('network properties')
     network_props.add_argument("--ip_address",
@@ -145,6 +149,11 @@ def parseArgs():
     if any(network_args) and not all(network_args):
         logging.critical("To configure static networking, IP address, "
                          "nameserver, netmask, and gateway are ALL required,")
+
+    ldap_args = [args.ldap_uri, args.ldap_basedn]
+    if any(ldap_args) and not all(ldap_args):
+        logging.fatal("To configure LDAP, you must specify both --ldap_uri and "
+                      "--ldap_basedn.")
 
     return args
 
