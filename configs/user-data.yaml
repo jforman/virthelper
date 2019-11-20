@@ -14,7 +14,7 @@ packages:
   - less
   - socat
   - vim
-{% if ldap_uri %}
+{%- if ldap_uri %}
   - libnss-ldap
 {% endif %}
 
