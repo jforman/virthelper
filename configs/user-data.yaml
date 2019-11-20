@@ -24,8 +24,6 @@ ssh_pwauth: yes
 
 runcmd:
   - touch /etc/cloud/cloud-init.disabled
-  - modprobe br_netfilter
-  - modprobe overlay
 
 ssh_authorized_keys:
 {%- for key in ssh_keys %}
@@ -43,17 +41,13 @@ users:
     gecos: Cloud NonRoot Role User
     uid: "9001"
 
-
 write_files:
-  - path: /etc/modules-load.d/br-netfilter.conf
+  - path: /etc/modules-load.d/kubernetes_modules.conf
     content: |
-      # Automatically load br_netfilter at system startup
+      # Automatically load these modules needed by Kubernetes at system startup
       br_netfilter
-    permissions: '0644'
-  - path: /etc/modules-load.d/overlay.conf
-    content: |
-      # Automatically load overlay at system startup
       overlay
+      vxlan
     permissions: '0644'
 {% if ldap_uri %}
   - path: /etc/ldap.conf
