@@ -24,6 +24,7 @@ ssh_pwauth: yes
 
 runcmd:
   - touch /etc/cloud/cloud-init.disabled
+  - modprobe br_netfilter
 
 ssh_authorized_keys:
 {%- for key in ssh_keys %}
