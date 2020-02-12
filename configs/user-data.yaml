@@ -22,9 +22,12 @@ packages:
 # password authentication is needed.
 ssh_pwauth: yes
 
+# Disable MOTD Spam
+# https://eklitzke.org/disabling-ubuntu-motd-spam
 runcmd:
   - touch /etc/cloud/cloud-init.disabled
   - modprobe br_netfilter
+  - sed -i 's/^ENABLED=.*/ENABLED=0/' /etc/default/motd-news
 
 ssh_authorized_keys:
 {%- for key in ssh_keys %}
