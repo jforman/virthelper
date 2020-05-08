@@ -155,6 +155,9 @@ class VMBuilder(object):
         elif self.getVmType() == 'ubuntu-cloud':
             import ubuntu_cloud
             VMBuilder.build = ubuntu_cloud.UbuntuCloud()
+        elif self.getVmType() == 'proxmox-ubuntu-cloud':
+            import proxmox_ubuntu_cloud
+            VMBuilder.build = proxmox_ubuntu_cloud.ProxmoxUbuntuCloud()
 
         return VMBuilder.build
 

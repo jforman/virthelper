@@ -10,7 +10,7 @@ from vmtypes import VMBuilder
 def parseArgs():
     """Parse and return command line flags."""
     parser = argparse.ArgumentParser(
-        description="Building libvirt virtual machines, made easy.",
+        description="Building libvirt and Proxmox virtual machines, made easy.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     commands = parser.add_argument_group('commands')
@@ -62,7 +62,7 @@ def parseArgs():
                                 "See command list_disk_pools"))
     vm_props.add_argument("--vm_type",
                           choices=["coreos", "debian",
-                          "ubuntu", "ubuntu-cloud"],
+                          "ubuntu", "ubuntu-cloud", "proxmox-ubuntu-cloud"],
                           help="Type of VM to create.")
     vm_props.add_argument("--host_name",
                           help="Virtual Machine Base Hostname")
@@ -143,6 +143,15 @@ def parseArgs():
     debian_args.add_argument("--dist_mirror",
                              help="Installation Mirror. Default: %(default)s",
                              default="mirrors.mit.edu")
+
+    proxmox_args = parser.add_argument_group('proxmox related arguments')
+    proxmox_args.add_argument(
+        "--proxmox_username",
+        help="Proxmox cluster username.")
+
+    proxmox_args.add_argument(
+        "--proxmox_password",
+        help="Proxmox cluster password.")
 
     args = parser.parse_args()
     network_args = [args.ip_address, args.nameserver, args.gateway, args.netmask]
