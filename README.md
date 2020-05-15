@@ -73,6 +73,8 @@ There are several required parameters.
 vmbuilder.py --bridge_interface ${vm_host_iface} --disk_pool_name ${disk_pool_name} --host_name ${vm_name} --vm_type ${host_type} --domain_name ${vm_domainname} --preseed_url http://${fqdn}/mycustom.pressed create_vm
 ```
 
+When creating a VM on Proxmox, it is important to tag all template VM's with the tag 'template'. The name of the VM will be needed as the argument to the `proxmox_template` flag.
+
 ### Creating a three-cluster CoreOS VM set.
 
 If you want to tie your CoreOS VMs together into an etcd-based cluster the following flags are required:
