@@ -148,8 +148,6 @@ class VMBuilder(object):
 
         if self.getVmType() == 'ubuntu':
             VMBuilder.build = Ubuntu()
-        elif self.getVmType() == 'coreos':
-            VMBuilder.build = coreos.CoreOS()
         elif self.getVmType() == 'debian':
             VMBuilder.build = Debian()
         elif self.getVmType() == 'ubuntu-cloud':

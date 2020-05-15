@@ -65,7 +65,7 @@ def parseArgs():
                           help=("Disk pool for VM disk image storage."
                                 "See command list_disk_pools"))
     vm_props.add_argument("--vm_type",
-                          choices=["coreos", "debian",
+                          choices=["debian",
                                    "ubuntu", "ubuntu-cloud",
                                    "proxmox-ubuntu-cloud"],
                           help="Type of VM to create.")
@@ -96,45 +96,6 @@ def parseArgs():
     vm_host_props.add_argument("--vm_host",
                                default="localhost",
                                help="VM host. Default: %(default)s")
-
-    coreos_args = parser.add_argument_group('coreos vm properties')
-    coreos_args.add_argument("--coreos_ssl_certs_dir",
-                             default="/etc/ssl/certs",
-                             help=("Path for storing SSL certs on "
-                                   "CoreOS host."))
-    coreos_args.add_argument("--coreos_channel",
-                             choices=["stable", "beta", "alpha"],
-                             default="stable",
-                             help=("Channel of CoreOS image for VM base. "
-                                   "Default: %(default)s."))
-    coreos_args.add_argument("--coreos_image_age",
-                             default=7,
-                             help=("Age (days) of CoreOS base image before "
-                                   "downloading a new one. "
-                                   "Default: %(default)s"))
-    coreos_args.add_argument("--coreos_cloud_config_template",
-                             default=os.path.join(
-                                 os.path.dirname(
-                                     os.path.realpath(__file__)),
-                                 "configs",
-                                 "coreos_user_data.template"),
-                             help=("Jinja2 template for CoreOS cloud config "
-                                   "user_data. Default: %(default)s"))
-    coreos_args.add_argument("--coreos_create_cluster",
-                             action="store_true",
-                             help="Create an etcd cluster containing the "
-                                  "instance(s).")
-    coreos_args.add_argument("--coreos_cluster_overlay_network",
-                             default="10.123.0.0/16",
-                             help="Default overlay network used for "
-                                  "Flannel clustering. Default: %(default)s")
-    coreos_args.add_argument("--coreos_nfs_mount",
-                             action="append",
-                             help="Mount Host:Mount tuple on CoreOS machine.")
-    coreos_args.add_argument("--coreos_ct_version",
-                             default="0.5.0",
-                             help=("Version of CoreOS config transpiler "
-                                   "in the creation of the Ignition config."))
 
     debian_args = parser.add_argument_group('debian-based vm properties')
     debian_args.add_argument("--preseed_url",
