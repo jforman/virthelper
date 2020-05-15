@@ -80,7 +80,7 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
     def normalizeVMState(self):
         """Delete VM if one of same name is found."""
         existing_found = False
-        logging.info(f"Seeing if other VMs of same name ({self.getVmName()}) exist..")
+        logging.info(f"Seeing if other VMs of same name {self.getVmName()} exist..")
         if not bool(self.getAllVMInfo()):
             # No VMs are found in the cluster.
             return
