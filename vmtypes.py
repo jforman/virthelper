@@ -24,6 +24,7 @@ class VMBuilder(object):
     cluster_index = 0
     args = None
     virt_install_flag_updates = {}
+    cluster_vm_suffixes = []
 
     def __init__(self, args):
         VMBuilder.args = args
@@ -59,6 +60,17 @@ class VMBuilder(object):
         """Return host_name argument from command line."""
         return self.args.host_name
 
+    def setClusterVmSuffixes(self):
+        """given a cluster size and starting index, create list of VM suffixes."""
+        VMBuilder.cluster_vm_suffixes = list(range(
+            self.args.cluster_start_index,
+            self.args.cluster_start_index + self.getClusterSize()))
+        logging.info(f"Set cluster_vm_suffixes: {VMBuilder.cluster_vm_suffixes}.")
+
+    def getClusterVmSuffix(self, host_index):
+        """given an index, return the Vm suffix from the list of suffixes."""
+        return VMBuilder.cluster_vm_suffixes[host_index]
+
     def setVmHostName(self, host_name, host_index, cluster_size):
         """Set indexed hostname based upon name and index.
 
@@ -70,7 +82,8 @@ class VMBuilder(object):
             return
 
         host_name = host_name.split(".")[0]
-        newname = "%s%d" % (host_name, host_index)
+        host_suffix = self.getClusterVmSuffix(host_index)
+        newname = "%s%d" % (host_name, host_suffix)
         VMBuilder.vm_hostname = newname
 
     def getVmHostName(self):
@@ -483,6 +496,7 @@ class VMBuilder(object):
     def createVM(self):
         """Main execution handler for the script."""
 
+        self.setClusterVmSuffixes()
         for cluster_index in range(0, self.getClusterSize()):
             self.setClusterIndex(cluster_index)
             logging.debug(f"Starting to build host {self.getClusterIndex()}.")

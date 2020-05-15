@@ -36,6 +36,10 @@ def parseArgs():
                         type=int,
                         help=("Create a number of VM instances. "
                               "Default: %(default)s"))
+    parser.add_argument("--cluster_start_index",
+                        default=0,
+                        type=int,
+                        help="VM name suffix to start using when creating multiple VMs.")
     parser.add_argument("--timeout_secs",
                         help="Timeout in seconds to wait for any single operation.",
                         type=int,
