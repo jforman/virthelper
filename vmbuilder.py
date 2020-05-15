@@ -36,6 +36,10 @@ def parseArgs():
                         type=int,
                         help=("Create a number of VM instances. "
                               "Default: %(default)s"))
+    parser.add_argument("--timeout_secs",
+                        help="Timeout in seconds to wait for any single operation.",
+                        type=int,
+                        default=300)
 
     vm_props = parser.add_argument_group('vm properties')
     vm_props.add_argument("--bridge_interface",
@@ -62,7 +66,8 @@ def parseArgs():
                                 "See command list_disk_pools"))
     vm_props.add_argument("--vm_type",
                           choices=["coreos", "debian",
-                          "ubuntu", "ubuntu-cloud", "proxmox-ubuntu-cloud"],
+                                   "ubuntu", "ubuntu-cloud",
+                                   "proxmox-ubuntu-cloud"],
                           help="Type of VM to create.")
     vm_props.add_argument("--host_name",
                           help="Virtual Machine Base Hostname")
@@ -122,14 +127,14 @@ def parseArgs():
     coreos_args.add_argument("--coreos_cluster_overlay_network",
                              default="10.123.0.0/16",
                              help="Default overlay network used for "
-                                "Flannel clustering. Default: %(default)s")
+                                  "Flannel clustering. Default: %(default)s")
     coreos_args.add_argument("--coreos_nfs_mount",
                              action="append",
                              help="Mount Host:Mount tuple on CoreOS machine.")
     coreos_args.add_argument("--coreos_ct_version",
                              default="0.5.0",
                              help=("Version of CoreOS config transpiler "
-                             "in the creation of the Ignition config."))
+                                   "in the creation of the Ignition config."))
 
     debian_args = parser.add_argument_group('debian-based vm properties')
     debian_args.add_argument("--preseed_url",
@@ -145,13 +150,17 @@ def parseArgs():
                              default="mirrors.mit.edu")
 
     proxmox_args = parser.add_argument_group('proxmox related arguments')
-    proxmox_args.add_argument(
-        "--proxmox_username",
-        help="Proxmox cluster username.")
+    proxmox_args.add_argument("--proxmox_username",
+                              help="Proxmox cluster username.")
+    proxmox_args.add_argument("--proxmox_password",
+                              help="Proxmox cluster password.")
+    proxmox_args.add_argument("--proxmox_template",
+                              help="VM template to use as base for VM install.")
+    proxmox_args.add_argument("--proxmox_storage",
+                              help="Target storage name for VM installs.")
+    proxmox_args.add_argument("--proxmox_sshkeys",
+                              help="SSH keys to install on VM.")
 
-    proxmox_args.add_argument(
-        "--proxmox_password",
-        help="Proxmox cluster password.")
 
     args = parser.parse_args()
     network_args = [args.ip_address, args.nameserver, args.gateway, args.netmask]
@@ -177,7 +186,7 @@ def main():
     if vm.args.command == 'list_disk_pools':
         print(vm.getDiskPools())
     elif vm.args.command == 'list_pool_volumes':
-        print(m.getDiskPoolVolumes())
+        print(vm.getDiskPoolVolumes())
     elif vm.args.command == 'create_vm':
         logging.debug("about to run vm.getbuild.createvm")
         vm.verifyMinimumCreateVMArgs()

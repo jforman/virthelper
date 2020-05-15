@@ -14,7 +14,7 @@ virtbuilder is a helpful wrapper script that makes creating virtual machines man
 Supported types of virtual machines that can be created:
 * CoreOS
 * Debian
-* Ubuntu
+* Ubuntu (libvirt and proxmox)
 
 
 ## Assumptions
@@ -24,7 +24,7 @@ Supported types of virtual machines that can be created:
 ## Requirements
 
 * Python
-* Python module: bs4, ipaddress, libvirt, jinja2, netaddr
+* Python module: bs4, ipaddress, libvirt, jinja2, netaddr, proxmoxer, python3-requests
 
 ## Usage
 
