@@ -198,7 +198,11 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
             'size': f"{self.args.disk_size_gb}G",
         }
 
-        self.proxmox.nodes(node).qemu(new_vmid).resize().put(**resize_options)
+        if self.args.dry_run:
+            logging.info(f"DRY RUN: Would have resized disk on VM{new_vmid} with options: {resize_options}.")
+        else:
+            logging.info(f"Resizing disk on VM{new_vmid} with options: {resize_options}.")
+            self.proxmox.nodes(node).qemu(new_vmid).resize().put(**resize_options)
 
         vm_dict = {
             'ipconfig0': self.getNetworkConfig(),
@@ -224,6 +228,9 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
             logging.debug(f"VM options setting output: {ret_val}.")
             logging.info(f"Done setting VM options.")
 
-        logging.info(f"Starting VM {self.getVmName()}.")
-        self.proxmox.nodes(node).qemu(new_vmid).status.start.post()
+        if self.args.dry_run:
+            logging.info(f"DRY RUN: Would have started VM {self.getVmName()}.")
+        else:
+            logging.info(f"Starting VM {self.getVmName()}.")
+            self.proxmox.nodes(node).qemu(new_vmid).status.start.post()
         logging.info(f"Completed install of VM {self.getVmName()}.")
