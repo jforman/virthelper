@@ -25,6 +25,12 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
         self.allvminfo = {}
         self.getAllVMInfo()
 
+    def getNodeName(self):
+        """return node name from vm_host."""
+        node_name = self.args.vm_host.split(".")[0]
+        logging.debug(f"Returning node name {node_name} from vm host {self.args.vm_host}.")
+        return node_name
+
     def getAllVMInfo(self):
         """Make a dict containing information on all VMs."""
         if not self.allvminfo:
@@ -123,11 +129,15 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
 
     def getViableNode(self):
         """Return node name to install VM to."""
-        # TODO: make this smarter than just picking the first node. check
-        # for available ram/cpu on the node compared to what VM is requesting.
-        nodes = [x['node'] for x in self.proxmox.nodes.get()]
-        logging.debug(f"Found viable nodes: {nodes}.")
-        return nodes[0]
+        # TODO: make this smarter than just picking the node that was passed
+        #  as a flag. check for available ram/cpu on the node compared to
+        #  what VM is requesting.
+        # nodes = [x['node'] for x in self.proxmox.nodes.get()]
+        # logging.debug(f"Found viable nodes: {nodes}.")
+        # return nodes[0]
+        node = self.args.vm_host.split(".")[0]
+        logging.debug(f"Found viable node: {node}.")
+        return node
 
     def getNetworkConfig(self):
         """Return cloudinit-friendly ipconfigN string for VM."""
@@ -146,14 +156,14 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
         for vm in self.getAllVMInfo().values():
             tags = vm['tags'].split(',')
             logging.debug(f"Found tags {tags} for {vm['name']}.")
-            if 'template' in tags:
+            if 'template' in tags and self.getAllVMInfo()[vm['vmid']]['node'] == self.getNodeName():
                 template_vms[vm['name']] = vm['vmid']
         logging.debug(f"Found template VMs: {template_vms}.")
         try:
             template_id = template_vms[template_name]
             logging.info(f"Found template VM ID: {template_id} for {template_name}.")
         except KeyError:
-            logging.error(f"Did not find a template VM for {template_name}.")
+            logging.error(f"Did not find a template VM for {template_name} on node requested for install.")
             sys.exit(1)
         return template_id
 
