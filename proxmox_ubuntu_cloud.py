@@ -217,7 +217,7 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
         vm_dict = {
             'ipconfig0': self.getNetworkConfig(),
             'memory': self.getRam(),
-            'net0': f"model=e1000,bridge={self.getNetworkBridgeInterface()}",
+            'net0': f"model=virtio,bridge={self.getNetworkBridgeInterface()}",
             'onboot': 1,
             'ostype': 'l26',
             'sockets': self.getCpus(),
