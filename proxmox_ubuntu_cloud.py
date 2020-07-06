@@ -4,6 +4,7 @@
 
 import logging
 import time
+import configparser
 import sys
 import urllib.parse
 import requests
@@ -17,13 +18,29 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
 
     def __init__(self):
         super(ProxmoxUbuntuCloud, self).__init__()
+        auth_params = self.getAuthParams(
+            self.args.config,
+            self.args.cluster)
         self.proxmox = ProxmoxAPI(
             self.args.vm_host,
-            user=self.args.proxmox_username,
-            password=self.args.proxmox_password,
+            user=auth_params['user'],
+            token_name=auth_params['token'],
+            token_value=auth_params['secret'],
             verify_ssl=False)
         self.allvminfo = {}
         self.getAllVMInfo()
+
+    def getAuthParams(self, cf, cluster):
+        """read API auth parameters from config file."""
+        cfg = configparser.ConfigParser()
+        cfg.read(cf)
+        if not cfg.has_section(cluster):
+            logging.error(f"Did not find cluster {cluster} in authentication config.")
+            sys.exit(1)
+        params = cfg.items(cluster)
+        pd = dict(params)
+        logging.info(f"Using authentication params: User: {pd['user']}; Token: {pd['token']}.")
+        return pd
 
     def getNodeName(self):
         """return node name from vm_host."""

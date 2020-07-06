@@ -44,6 +44,8 @@ def parseArgs():
                         help="Timeout in seconds to wait for any single operation.",
                         type=int,
                         default=300)
+    parser.add_argument("--config", help="Virthelper config.")
+    parser.add_argument("--cluster", help="Cluster name in config file.")
 
     vm_props = parser.add_argument_group('vm properties')
     vm_props.add_argument("--bridge_interface",
@@ -115,10 +117,6 @@ def parseArgs():
                              default="mirrors.mit.edu")
 
     proxmox_args = parser.add_argument_group('proxmox related arguments')
-    proxmox_args.add_argument("--proxmox_username",
-                              help="Proxmox cluster username.")
-    proxmox_args.add_argument("--proxmox_password",
-                              help="Proxmox cluster password.")
     proxmox_args.add_argument("--proxmox_template",
                               help="VM template to use as base for VM install.")
     proxmox_args.add_argument("--proxmox_storage",
@@ -128,16 +126,25 @@ def parseArgs():
 
 
     args = parser.parse_args()
+    startup_errors = False
     network_args = [args.ip_address, args.nameserver, args.gateway, args.netmask]
     if any(network_args) and not all(network_args):
         logging.critical("To configure static networking, IP address, "
                          "nameserver, netmask, and gateway are ALL required,")
+        startup_errors = True
 
     ldap_args = [args.ldap_uri, args.ldap_basedn]
     if any(ldap_args) and not all(ldap_args):
         logging.fatal("To configure LDAP, you must specify both --ldap_uri and "
                       "--ldap_basedn.")
+        startup_errors = True
 
+    if args.config and not os.path.exists(args.config):
+        logging.fatal(f"Specified config {args.config} does not exist.")
+        startup_errors = True
+
+    if startup_errors:
+        sys.exit(1)
     return args
 
 
