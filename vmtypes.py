@@ -111,9 +111,9 @@ class VMBuilder(object):
         """Return on-disk path to directory of VM."""
         return os.path.join(self.getDiskPoolPath(), self.getVmName())
 
-    def getDiskPoolName(self):
-        """Return name of disk pool VM lives on."""
-        return self.args.disk_pool_name
+    def getVmStoragePoolName(self):
+        """Return name of storage pool VM lives on."""
+        return self.args.vm_storage_pool
 
     def getNetworkBridgeInterface(self):
         """Get network interface chosen for VM."""
@@ -196,7 +196,7 @@ class VMBuilder(object):
 
         command_line = ["/usr/bin/virsh",
                         "pool-dumpxml",
-                        self.getDiskPoolName()]
+                        self.getVmStoragePoolName()]
         try:
             output = subprocess.check_output(command_line,
                                              stderr=subprocess.STDOUT)
@@ -209,10 +209,10 @@ class VMBuilder(object):
 
     def getDiskPoolVolumes(self):
         """Return list of all volumes in specified disk pool."""
-        logging.debug(f"Getting volumes for pool {self.getDiskPoolName()}.")
+        logging.debug(f"Getting volumes for pool {self.getVmStoragePoolName()}.")
         volumes = [x.name() for x in self.getConn().storagePoolLookupByName(
-            self.getDiskPoolName()).listAllVolumes()]
-        logging.debug(f"Volumes in pool {self.getDiskPoolName()}: {volumes}.")
+            self.getVmStoragePoolName()).listAllVolumes()]
+        logging.debug(f"Volumes in pool {self.getVmStoragePoolName()}: {volumes}.")
         return volumes
 
     def getIPAddress(self):
@@ -300,7 +300,7 @@ class VMBuilder(object):
 
         command_line = (
             f"/usr/bin/virsh vol-create-as "
-            f"--pool {self.getDiskPoolName()} "
+            f"--pool {self.getVmStoragePoolName()} "
             f"--name {self.getVmDiskImageName()} "
             f"--capacity {self.GetDiskSize()}G "
             f"--format qcow2 "
@@ -329,7 +329,7 @@ class VMBuilder(object):
             logging.info("VM image does not exist for VM. Nothing to delete.")
             return
 
-        logging.info(f"Attempting to delete image in pool {self.getDiskPoolName()} for vm {self.getVmName()}")
+        logging.info(f"Attempting to delete image in pool {self.getVmStoragePoolName()} for vm {self.getVmName()}")
         if self.args.dry_run:
             logging.info("DRY RUN: Disk image not actually deleted.")
             return
@@ -423,7 +423,7 @@ class VMBuilder(object):
 
         flags = {
             "connect": f"qemu+ssh://{self.getVmHost()}/system",
-            "disk": [f"vol={self.getDiskPoolName()}/{self.getVmDiskImageName},cache=none"],
+            "disk": [f"vol={self.getVmStoragePoolName()}/{self.getVmDiskImageName},cache=none"],
             "name": self.getVmName(),
             "network": f"bridge={self.getNetworkBridgeInterface()},model=virtio",
             "os-type": "linux",
@@ -516,7 +516,7 @@ class VMBuilder(object):
         if not all([
             self.args.bridge_interface,
             self.args.domain_name,
-            self.args.disk_pool_name,
+            self.getVmStoragePoolName(),
             self.args.vm_type,
             self.args.host_name,
         ]):

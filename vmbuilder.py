@@ -67,8 +67,8 @@ def parseArgs():
                           default=512,
                           choices=[512, 1024, 2048, 4096, 8192],
                           help="Amount of RAM, in MB. Default: %(default)d")
-    vm_props.add_argument("--disk_pool_name",
-                          help=("Disk pool for VM disk image storage."
+    vm_props.add_argument("--vm_storage_pool",
+                          help=("Disk pool for VM disk storage."
                                 "See command list_disk_pools"))
     vm_props.add_argument("--vm_type",
                           choices=["debian",

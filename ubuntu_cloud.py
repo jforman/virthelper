@@ -292,12 +292,12 @@ class UbuntuCloud(vmtypes.BaseVM):
         commands.extend([command_line])
 
         command_line = ["/usr/bin/virsh", "pool-refresh",
-                        "--pool", self.getDiskPoolName()]
+                        "--pool", self.getVmStoragePoolName()]
         commands.extend([command_line])
 
         command_line = ["/usr/bin/virsh", "vol-upload",
                         "--vol", os.path.basename(self.getVmDiskImagePath()),
-                        "--pool", self.getDiskPoolName(),
+                        "--pool", self.getVmStoragePoolName(),
                         "--file", self.getVmDiskImagePath()]
         commands.extend([command_line])
 
@@ -318,7 +318,7 @@ class UbuntuCloud(vmtypes.BaseVM):
 
     def getVirtInstallCustomFlags(self):
         return {
-            'disk': [f"vol={self.getDiskPoolName()}/{self.getVmDiskImageName()},cache=none,bus=virtio",
+            'disk': [f"vol={self.getVmStoragePoolName()}/{self.getVmDiskImageName()},cache=none,bus=virtio",
                      f"{self.getVmSeedImagePath()},cache=none,bus=virtio"],
             'boot': 'hd',
         }
