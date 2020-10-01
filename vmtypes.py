@@ -40,6 +40,10 @@ class VMBuilder(object):
             os.path.realpath(__file__)),
             "configs")
 
+    def getDefaultUser(self):
+        """return the default username for the virtual machine."""
+        return self.args.default_user
+
     def getClusterSize(self):
         """Integer size of cluster being created."""
         return self.args.cluster_size

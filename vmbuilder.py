@@ -84,6 +84,10 @@ def parseArgs():
                           help="URI for LDAP server.")
     vm_props.add_argument("--ldap_basedn",
                           help="LDAP base DN for user system authentication.")
+    vm_props.add_argument("--default_user",
+                          default="ubuntu",
+                          help="Default username for Virtual Machine.")
+
 
     network_props = parser.add_argument_group('network properties')
     network_props.add_argument("--ip_address",

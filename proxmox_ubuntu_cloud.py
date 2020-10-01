@@ -232,6 +232,7 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
             self.proxmox.nodes(node).qemu(new_vmid).resize().put(**resize_options)
 
         vm_dict = {
+            'ciuser': self.getDefaultUser(),
             'ipconfig0': self.getNetworkConfig(),
             'memory': self.getRam(),
             'net0': f"model=virtio,bridge={self.getNetworkBridgeInterface()}",
