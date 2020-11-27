@@ -133,6 +133,8 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
 
         if existing_found:
             sys.exit(1)
+        else:
+            logging.info(f"Did not find pre-existing VM of name {self.getVmName()}.")
 
         logging.debug("Done with normalizeVmState.")
 
