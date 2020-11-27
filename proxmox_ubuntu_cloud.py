@@ -208,6 +208,7 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
             'name': self.getVmName(),
             'newid': new_vmid,
             'full': 1,
+            'format': 'raw',
             'storage': self.getVmStoragePoolName(),
         }
         logging.debug(f"Clone Options: {clone_options}.")
