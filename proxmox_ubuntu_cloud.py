@@ -124,6 +124,7 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
                     status = self.proxmox.nodes(node).qemu(vmid).delete()
                     self.checkTaskStatus(node, status, self.args.timeout_secs)
                     logging.debug(f"Finished deleting VM({vmid}): {self.getVmName()}.")
+                    return
                 else:
                     logging.critical(
                         f"Existing VM({vmid}) by that name already found, "
