@@ -225,36 +225,28 @@ class VMBuilder(object):
         If more than one, we need to calculate which IP of set to return.
         """
         if not self.args.ip_address:
+            # TODO: Detect if we want IPv4 only or IPv6 only at some point,
             # Not statically configured, so return nothing (DHCP assumed).
+            logging.info("No static IP address configured, assuming auto-configured.")
             return None
 
-        if self.getClusterSize() == 1:
-            return self.args.ip_address
+        base_ip_address = ipaddress.ip_address(
+            self.args.ip_address)
 
-        network = ipaddress.ip_network(
-            f"{self.args.ip_address}/{self.getNetmask()}",
-            strict=False)
+        logging.debug(f"Base IP Address: {base_ip_address}.")
 
-        logging.debug(f"Computed Network: {network}.")
-        hosts = [x.exploded for x in network.hosts()]
-        host_start_index = hosts.index(self.args.ip_address)
-        logging.debug(f"Host start index: {host_start_index}, size: {self.getClusterSize()}, "
-                      f"cluster index: {self.getClusterIndex()}.")
-        hosts_slice = hosts[
-            host_start_index:host_start_index+self.getClusterSize()]
-        logging.debug(f"Slice of hosts: {hosts_slice}.")
+        indexed_ip_address = base_ip_address + self.getClusterIndex()
+        logging.info(f"Indexed ({self.getClusterIndex()}) IP address for host: {indexed_ip_address}.")
+        return indexed_ip_address
 
-        # Subtract one from the list because the list is
-        # zero-indexed, but the cluster index is not.
-        ip_address = hosts_slice[self.getClusterIndex()]
-        logging.debug(f"Generated IP address: {ip_address}.")
-        return ip_address
-
-    def getPrefixLength(self, ip_address, netmask):
+    def getPrefixLength(self, ip_address, netmask, ip_family):
         """Given an IP address and netmask, return integer prefix length."""
         composed_address = f"{ip_address}/{netmask}"
         logging.debug(f"Determing network prefix length of {composed_address}.")
-        return ipaddress.IPv4Network(composed_address, strict=False).prefixlen
+        if ip_family == "ip":
+            return ipaddress.IPv4Network(composed_address, strict=False).prefixlen
+        if ip_family == "ip6":
+            return ipaddress.IPv6Network(composed_address, strict=False).prefixlen
 
     def getNameserver(self):
         """Return list of nameserver IP addresses."""

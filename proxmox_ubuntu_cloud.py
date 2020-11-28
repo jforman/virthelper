@@ -2,6 +2,7 @@
 
 # pylint: disable=logging-fstring-interpolation
 
+import ipaddress
 import logging
 import time
 import configparser
@@ -162,11 +163,29 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
     def getNetworkConfig(self):
         """Return cloudinit-friendly ipconfigN string for VM."""
         ip = self.getIPAddress()
+
         if not ip:
-            ipconfig = "ip=dhcp,ip6=auto"
+            return "ip=dhcp,ip6=auto"
+
+        ip_type = ipaddress.ip_address(ip)
+        logging.debug(f"ip_type: {type(ip_type)}.")
+        ip_family=''
+        gw_type=''
+
+        if isinstance(ip_type, ipaddress.IPv4Address):
+            logging.info("Detected IPv4 static IP address.")
+            ip_family = 'ip'
+            gw_type = 'gw'
+        elif isinstance(ip_type, ipaddress.IPv6Address):
+            logging.info("Detected IPv6 static IP address.")
+            ip_family = 'ip6'
+            gw_type = 'gw6'
         else:
-            cidr = self.getPrefixLength(ip, self.getNetmask())
-            ipconfig = f"ip={ip}/{cidr},gw={self.getGateway()}"
+            logging.error(f'Unable to determine IP address type (v4 or v6) of IP address: {ip}.')
+            sys.exit(1)
+
+        prefix_length = self.getPrefixLength(ip, self.getNetmask(), ip_family)
+        ipconfig = f"{ip_family}={ip}/{prefix_length},{gw_type}={self.getGateway()}"
         logging.debug(f"Network ipconfig0: {ipconfig}")
         return ipconfig
 

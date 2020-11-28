@@ -96,7 +96,7 @@ def parseArgs():
                                action='append',
                                help="IP Address of DNS server. Multiple servers accepted.")
     network_props.add_argument("--netmask",
-                               help="IP Netmask for static config.")
+                               help="IPv4 CIDR Netmask or IPv6 Network Preflix length for static config.")
     network_props.add_argument("--gateway",
                                help="IP Address of default gateway.")
     network_props.add_argument("--mac_address",
