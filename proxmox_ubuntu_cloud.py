@@ -193,9 +193,7 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
         """return VM ID of VM template."""
         template_vms = {}
         for vm in self.getAllVMInfo().values():
-            tags = vm['tags'].split(',')
-            logging.debug(f"Found tags {tags} for {vm['name']}.")
-            if 'template' in tags and self.getAllVMInfo()[vm['vmid']]['node'] == self.getNodeName():
+            if vm['template'] and self.getAllVMInfo()[vm['vmid']]['node'] == self.getNodeName():
                 template_vms[vm['name']] = vm['vmid']
         logging.debug(f"Found template VMs: {template_vms}.")
         try:
