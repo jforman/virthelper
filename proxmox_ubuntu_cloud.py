@@ -195,7 +195,8 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
         for vm in self.getAllVMInfo().values():
             if vm['template'] and self.getAllVMInfo()[vm['vmid']]['node'] == self.getNodeName():
                 template_vms[vm['name']] = vm['vmid']
-        logging.debug(f"Found template VMs: {template_vms}.")
+                ## TODO: ADD template name to the logging call below.
+                logging.info(f"Found candidate template VM: {template_vms[vm['name']]}. ")
         try:
             template_id = template_vms[template_name]
             logging.info(f"Found template VM ID: {template_id} for {template_name}.")
@@ -260,8 +261,7 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
             'onboot': 1,
             'ostype': 'l26',
             'sockets': self.getCpus(),
-            #'unique': 1,
-            'tags': "", # zero out the tags because they are copied from the template.
+            'tags': "clone",
         }
 
         if self.getNameserver():
