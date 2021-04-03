@@ -7,10 +7,11 @@ import subprocess
 import sys
 import time
 from urllib.parse import urlparse
+import uuid
 
 import libvirt
 from bs4 import BeautifulSoup
-
+import netaddr
 
 # NEXT: test overlay network flag
 
@@ -25,6 +26,7 @@ class VMBuilder(object):
     args = None
     virt_install_flag_updates = {}
     cluster_vm_suffixes = []
+    base_mac_address = None
 
     def __init__(self, args):
         VMBuilder.args = args
@@ -219,6 +221,30 @@ class VMBuilder(object):
         logging.debug(f"Volumes in pool {self.getVmStoragePoolName()}: {volumes}.")
         return volumes
 
+    def getMacAddress(self):
+        """If a MAC address is given on CLI, return it, indexed across
+           cluster size.
+
+           Otherwise, generate one.
+        """
+        if not VMBuilder.base_mac_address:
+            if self.args.mac_address:
+                try:
+                    VMBuilder.base_mac_address = netaddr.EUI(self.args.mac_address)
+                except netaddr.core.AddrFormatError:
+                    logging.fatal(f"Invalid MAC Address provided on command line: {self.args.mac_address}.")
+                    raise
+            else:
+                VMBuilder.base_mac_address = netaddr.EUI(uuid.uuid4().fields[5])
+
+        logging.info(f"Base MAC Address: {VMBuilder.base_mac_address}.")
+        mac_obj = VMBuilder.base_mac_address
+        mac_int = int(mac_obj)
+        mac_int_indexed = mac_int+self.getClusterIndex()
+        mac_indexed = str(netaddr.EUI(mac_int_indexed))
+        logging.info(f"Instance-specific MAC Address: {mac_indexed}.")
+        return mac_indexed
+
     def getIPAddress(self):
         """
         If only one host, return IP address.
@@ -389,20 +415,6 @@ class VMBuilder(object):
         self.deleteVM()
         self.deleteVMImage()
 
-    def checkValidMacAddress(self, mac_address, fatal=False):
-        """Check if MAC address is valid. If fatal is true, raise exception."""
-        logging.debug(f"Verifying validity of MAC address: {mac_address}.")
-        is_valid_mac = netaddr.valid_mac(mac_address)
-        if is_valid_mac:
-            logging.debug("Found valid MAC address.")
-            return True
-
-        logging.error("Invalid MAC address found.")
-        if fatal:
-            raise
-
-        return False
-
     def executeVirtInstall(self):
         """Execute virt-install with vm-specific flags."""
 
@@ -421,7 +433,7 @@ class VMBuilder(object):
             "connect": f"qemu+ssh://{self.getVmHost()}/system",
             "disk": [f"vol={self.getVmStoragePoolName()}/{self.getVmDiskImageName},cache=none"],
             "name": self.getVmName(),
-            "network": f"bridge={self.getNetworkBridgeInterface()},model=virtio",
+            "network": f"bridge={self.getNetworkBridgeInterface()},model=virtio,mac={self.getMacAddress()}",
             "os-type": "linux",
             "ram": self.getRam(),
             "vcpus": self.getCpus(),
@@ -433,11 +445,6 @@ class VMBuilder(object):
         virt_install_custom_flags = self.getBuild().getVirtInstallCustomFlags()
         if virt_install_custom_flags:
             flags.update(virt_install_custom_flags)
-
-        if self.args.mac_address:
-            self.checkValidMacAddress(self.args.mac_address, fatal=True)
-            flags.update({'network':
-                flags['network'] + ",mac=" + self.args.mac_address })
 
         extra_args = self.getBuild().getVirtInstallExtraArgs()
         if extra_args:

@@ -257,7 +257,7 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
             'ciuser': self.getDefaultUser(),
             'ipconfig0': self.getNetworkConfig(),
             'memory': self.getRam(),
-            'net0': f"model=virtio,bridge={self.getNetworkBridgeInterface()}",
+            'net0': f"model=virtio,bridge={self.getNetworkBridgeInterface()},macaddr={self.getMacAddress()}",
             'onboot': 1,
             'ostype': 'l26',
             'sockets': self.getCpus(),
