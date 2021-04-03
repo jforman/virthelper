@@ -21,9 +21,15 @@ Supported types of virtual machines that can be created:
 ## Requirements
 
 * Python
+* Python3-pip
 * Python module: bs4, ipaddress, libvirt, jinja2, netaddr, proxmoxer, python3-requests
-
 ## Usage
+
+## Docker Container
+
+```
+docker run --rm -it -v /path/to/proxmox-token.txt:/proxmox-prod-apitoken.txt jforman/vmbuilder:latest ./vmbuilder.py .... --config /proxmox/prod-apitoken.txt
+```
 
 ### Informational Commands
 
