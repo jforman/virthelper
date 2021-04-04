@@ -241,7 +241,9 @@ class VMBuilder(object):
         mac_obj = VMBuilder.base_mac_address
         mac_int = int(mac_obj)
         mac_int_indexed = mac_int+self.getClusterIndex()
-        mac_indexed = str(netaddr.EUI(mac_int_indexed))
+        mac_indexed = str(netaddr.EUI(mac_int_indexed)).replace("-", ":").lower()
+        # Unicast MACs, required by Proxmox, start with 00.
+        mac_indexed= "00" + mac_indexed[2:].lower()
         logging.info(f"Instance-specific MAC Address: {mac_indexed}.")
         return mac_indexed
 
