@@ -270,11 +270,12 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
         if self.args.proxmox_sshkeys:
             vm_dict.update({'sshkeys': urllib.parse.quote(self.getSSHKeys(), safe='')})
 
-        if self.args.dry_run:
-            logging.info(f"DRY RUN: Would have set VM {new_vmid} options: {vm_dict}.")
-        else:
+
+        logging.info(f"VM {new_vmid} options: {vm_dict}.")
+
+        if not self.args.dry_run:
             ret_val = self.proxmox.nodes(node).qemu(new_vmid).config.post(**vm_dict)
-            logging.debug(f"VM options setting output: {ret_val}.")
+            logging.debug(f"VM return value: {ret_val}.")
             logging.info(f"Done setting VM options.")
 
         if self.args.dry_run:
