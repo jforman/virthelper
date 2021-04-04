@@ -232,7 +232,7 @@ class VMBuilder(object):
                 try:
                     VMBuilder.base_mac_address = netaddr.EUI(self.args.mac_address)
                 except netaddr.core.AddrFormatError:
-                    logging.fatal(f"Invalid MAC Address provided on command line: {self.args.mac_address}.")
+                    logging.fatal(f"Invalid MAC Address provided on command line: {self.args.mac_address}")
                     raise
             else:
                 VMBuilder.base_mac_address = netaddr.EUI(uuid.uuid4().fields[5])
