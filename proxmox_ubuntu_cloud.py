@@ -122,7 +122,10 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
                     self.checkTaskStatus(node, status, self.args.timeout_secs)
                     logging.info(f"Stopped existing VM({vmid}): {self.getVmName()}.")
                     logging.info(f"Deleting existing VM({vmid}): {self.getVmName()}.")
-                    status = self.proxmox.nodes(node).qemu(vmid).delete()
+                    delete_options = {
+                        'purge': 1,
+                    }
+                    status = self.proxmox.nodes(node).qemu(vmid).delete(**delete_options)
                     self.checkTaskStatus(node, status, self.args.timeout_secs)
                     logging.debug(f"Finished deleting VM({vmid}): {self.getVmName()}.")
                     return
@@ -269,7 +272,6 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
 
         if self.args.proxmox_sshkeys:
             vm_dict.update({'sshkeys': urllib.parse.quote(self.getSSHKeys(), safe='')})
-
 
         logging.info(f"VM {new_vmid} options: {vm_dict}.")
 
