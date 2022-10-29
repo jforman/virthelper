@@ -147,6 +147,9 @@ def parseArgs():
         logging.fatal(f"Specified config {args.config} does not exist.")
         startup_errors = True
 
+    if not args.host_name:
+        logging.fatal(f"No host_name argument was specified. This is required for VM creation.")
+
     if startup_errors:
         sys.exit(1)
     return args
