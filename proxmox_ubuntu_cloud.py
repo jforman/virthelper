@@ -257,6 +257,7 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
             self.proxmox.nodes(node).qemu(new_vmid).resize().put(**resize_options)
 
         vm_dict = {
+            'agent': f'enabled=true,fstrim_cloned_disks=true',
             'ciuser': self.getDefaultUser(),
             'ipconfig0': self.getNetworkConfig(),
             'memory': self.getRam(),
