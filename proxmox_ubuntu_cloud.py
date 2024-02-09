@@ -27,7 +27,7 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
             user=auth_params['user'],
             token_name=auth_params['token'],
             token_value=auth_params['secret'],
-            verify_ssl=False)
+            verify_ssl=self.args.noverify_ssl)
         self.allvminfo = {}
         self.getAllVMInfo()
 

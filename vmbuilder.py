@@ -127,7 +127,9 @@ def parseArgs():
                               help="Target storage name for VM installs.")
     proxmox_args.add_argument("--proxmox_sshkeys",
                               help="SSH keys to install on VM.")
-
+    proxmox_args.add_argument("--noverify_ssl",
+                              action="store_false",
+                              help="Disable verifying SSL certificate on Proxmox API endpoint.")
 
     args = parser.parse_args()
     startup_errors = False
