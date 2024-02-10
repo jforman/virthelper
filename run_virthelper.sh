@@ -16,7 +16,7 @@ if ! test -f $1; then
     exit 1
 fi
 
-docker build -t jforman/virthelper:latest .
+./build_container.sh
 
 docker run \
     --rm -it \
