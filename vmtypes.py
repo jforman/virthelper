@@ -247,6 +247,17 @@ class VMBuilder(object):
         logging.info(f"Instance-specific MAC Address: {mac_indexed}.")
         return mac_indexed
 
+    def getIPAddressFamily(self, ip):
+        """Given an IP address, return either v4 or v6."""
+        ip_address_class = ipaddress.ip_address(ip)
+
+        if isinstance(ip_address_class, ipaddress.IPv4Address):
+            return "ipv4"
+        if isinstance(ip_address_class, ipaddress.IPv6Address):
+            return "ipv6"
+
+        logging.fatal(f"Unable to determine IP address family for IP {ip}.")
+        raise
     def getIPAddress(self):
         """
         If only one host, return IP address.
