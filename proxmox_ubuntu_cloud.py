@@ -180,13 +180,15 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
 
     def getNetworkConfig(self):
         """Return cloudinit-friendly ipconfigN string for VM."""
+        # TODO: add support for iterating over ip addresses and gateways to support
+        # multiple or only one address family (v4,v6).
+
         ip = self.getIPAddress()
 
         if not ip:
             return "ip=dhcp,ip6=auto"
 
         ip_type = ipaddress.ip_address(ip)
-        logging.debug(f"ip_type: {type(ip_type)}.")
         ip_family=''
         gw_type=''
 
