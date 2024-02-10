@@ -43,6 +43,21 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
         logging.info(f"Using authentication params: User: {pd['user']}; Token: {pd['token']}.")
         return pd
 
+    def getGateway(self):
+        """Depending on IP address and gateway args, return a gateway argument for cloud config."""
+
+        if self.args.gateway:
+            return super(ProxmoxUbuntuCloud, self).getGateway()
+
+        family = self.getIPAddressFamily(self.getIPAddress)
+        if family == "ipv4":
+            return "dhcp"
+        if family == "ipv6":
+            return "auto"
+
+        logging.fatal("Unable to determine IP gateway.")
+        raise
+
     def getNodeName(self):
         """return node name from vm_host."""
         node_name = self.args.vm_host.split(".")[0]
