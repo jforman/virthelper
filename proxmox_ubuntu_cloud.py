@@ -83,6 +83,7 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
         """given a task puid, check status and adhere to timeout."""
         deadline_time = time.time() + timeout_secs
         sleep_time = 10
+        logging.info(f"Deadline exceeded at {deadline_time}.")
         while 1:
             if time.time() > deadline_time:
                 logging.error(f"Timeout reached waiting on task {upid} on node {node}.")
