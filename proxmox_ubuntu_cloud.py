@@ -92,7 +92,7 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
             task_status = upid_status["status"]
             if task_status == "running":
                 logging.info(f"Current task status: {upid_status['status']}; "
-                             f" PID: {upid_status['pid']}.")
+                             f"PID: {upid_status['pid']}.")
                 logging.debug(f"Remaining time before task times out: "
                               f"{deadline_time - time.time()} secs.")
                 time.sleep(sleep_time)
