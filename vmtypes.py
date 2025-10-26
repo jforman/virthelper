@@ -258,6 +258,7 @@ class VMBuilder(object):
 
         logging.fatal(f"Unable to determine IP address family for IP {ip}.")
         raise
+
     def getIPAddress(self):
         """
         If only one host, return IP address.
