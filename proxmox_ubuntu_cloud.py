@@ -223,6 +223,10 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
             logging.error(f"Did not find a template VM for {template_name} on node requested for install.")
             sys.exit(1)
         return template_id
+    
+    def getProxmoxStorage(self):
+        """Return the storage name for storing virtual machine disks, and cloud-init disks."""
+        return self.args.proxmox_storage
 
     def getSSHKeys(self):
         """Given a path, read the SSH keys into a string."""
