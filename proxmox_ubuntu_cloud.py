@@ -106,7 +106,6 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
             logging.error(f"Task status exited NOT OK: {exit_status}. Return Value: {upid_status}.")
             sys.exit(1)
 
-
     def getNextVMId(self):
         """return next available VM ID."""
         if self.args.dry_run:
@@ -150,7 +149,6 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
                         f"Existing VM({vmid}) by that name already found, "
                         f"but --deleteifexists flag not passed. Exiting.")
                     existing_found = True
-
         if existing_found:
             sys.exit(1)
         else:
