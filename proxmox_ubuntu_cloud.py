@@ -237,11 +237,34 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
                 sshkeys = f.read()
         logging.debug(f"SSH keys as retrieved: {sshkeys}")
         return sshkeys
-
+    
+    def deleteVMImage(self, node, storage_volume, vmid):
+        """clean up proxmox's old VM images leftover from old VMs"""
+        logging.info(f"Looking for any straggler volumes for VM {vmid}.")
+        options = {
+            'node': node,
+            'storage': storage_volume,
+            'vmid' : vmid,
+        }
+        volumes = self.proxmox.nodes(node).storage(storage_volume).content.get(**options)
+        if not volumes:
+            logging.info(f"No straggler volumes found for VM {vmid} on {storage_volume}.")
+            return
+        
+        # TODO: Flesh this logic out once we've found a candidate with stragglers.
+        for volume in volumes:
+            logging.info(f"Deleting straggler volume: {volume['volid']}.")
+            output = self.proxmox.nodes(node).storage(storage_volume).content(volume['volid']).delete()
+            logging.info(f"Output from straggler cleanup: {output}.")
+        
     def executeVirtInstall(self):
         """Create VM. Set any options."""
         new_vmid = self.getNextVMId()
         node = self.getViableNode()
+
+        # Clean up any leftover images with this VM ID.
+        self.deleteVMImage(node, self.getProxmoxStorage(), new_vmid)
+
         logging.info(f"Beginning VM installation of ID:{new_vmid} on {node} of {self.getVmName()}.")
         template_vmid = self.getTemplateVMId(self.args.proxmox_template)
 
