@@ -160,6 +160,7 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
         """Create disk image."""
         # Proxmox uses the cloud disk image as the image itself for the VM.
         # We don't create a seperate disk image in this instance.
+        pass
 
     def getNetVMId(self):
         """get next available VM id."""
