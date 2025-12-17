@@ -533,13 +533,12 @@ class VMBuilder(object):
         if not all([
             self.args.bridge_interface,
             self.args.domain_name,
-            self.getVmStoragePoolName(),
             self.args.vm_type,
             self.args.host_name,
         ]):
             logging.critical(
                 "Missing critical arguments. Arguments considered "
-                "critical: bridge_interface, domain_name, disk_pool, "
+                "critical: bridge_interface, domain_name,"
                 "vm_type, host_name")
 
 class BaseVM(VMBuilder):
