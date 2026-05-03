@@ -132,7 +132,7 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
                 logging.info(f"Found VM{vmid} with same name {self.getVmName()} that already exists.")
                 node = vmvalues['node']
                 if self.args.dry_run:
-                    logging.info(f"DRY RUN: Would have stopped, and deleted VM({vmid}) {self.getVmName()}.")
+                    logging.info(f"DRY RUN: Would have deleted VM({vmid}) {self.getVmName()}.")
                     continue
                 if self.args.deleteifexists:
                     logging.info(f"Stopping existing VM({vmid}): {self.getVmName()}.")
@@ -246,6 +246,9 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
     def deleteVMImage(self, node, storage_volume, vmid):
         """clean up proxmox's old VM images leftover from old VMs"""
         logging.info(f"Looking for any straggler volumes for VM {vmid}.")
+        if self.args.dry_run:
+            logging.info("DRY RUN: Won't look for straggler volumes with faked VM ID.")
+            return
         options = {
             'node': node,
             'storage': storage_volume,
