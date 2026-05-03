@@ -157,7 +157,6 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
         else:
             logging.info(f"Did not find pre-existing VM of name {self.getVmName()}.")
 
-        logging.debug("Done with normalizeVmState.")
 
     def createDiskImage(self):
         """Create disk image."""
@@ -252,6 +251,7 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
             'storage': storage_volume,
             'vmid' : vmid,
         }
+
         volumes = self.proxmox.nodes(node).storage(storage_volume).content.get(**options)
         if not volumes:
             logging.info(f"No straggler volumes found for VM {vmid} on {storage_volume}.")
