@@ -24,10 +24,12 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
             self.args.cluster)
         self.proxmox = ProxmoxAPI(
             self.args.vm_host,
+            port=443,
             user=auth_params['user'],
             token_name=auth_params['token'],
             token_value=auth_params['secret'],
             verify_ssl=self.args.noverify_ssl)
+        proxmox_install_host = ''
         self.allvminfo = {}
         self.getAllVMInfo()
 
@@ -60,9 +62,10 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
 
     def getNodeName(self):
         """return node name from vm_host."""
-        node_name = self.args.vm_host.split(".")[0]
-        logging.debug(f"Returning node name {node_name} from vm host {self.args.vm_host}.")
-        return node_name
+        # TODO: clean up this logic, whether just changing variable/function names
+        # or reworking it. make it clear between the node being installed on
+        # and the IP/port of the proxmox API endpoint.
+        return self.proxmox_install_host
 
     def getAllVMInfo(self):
         """Make a dict containing information on all VMs."""
@@ -167,16 +170,19 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
         self.proxmox.cluster.nextid.get()
 
     def getViableNode(self):
-        """Return node name to install VM to."""
-        # TODO: make this smarter than just picking the node that was passed
-        #  as a flag. check for available ram/cpu on the node compared to
-        #  what VM is requesting.
-        # nodes = [x['node'] for x in self.proxmox.nodes.get()]
-        # logging.debug(f"Found viable nodes: {nodes}.")
-        # return nodes[0]
-        node = self.args.vm_host.split(".")[0]
-        logging.debug(f"Found viable node: {node}.")
-        return node
+        """Return node with most memory."""
+        nodes = [x['node'] for x in self.proxmox.nodes.get()]
+        logging.debug(f"Found nodes: {nodes}.")
+        nodes_availablememory_dict = {}
+        for node in self.proxmox.nodes.get():
+            node_name = node['node']
+            availablememory = node['maxmem'] - node['mem']
+            nodes_availablememory_dict[node['node']] = availablememory
+            logging.debug(f"Node info: {node_name}:availablememory:{availablememory}.")
+        proxmox_node_with_most_free_memory = max(nodes_availablememory_dict, key=nodes_availablememory_dict.get)
+        logging.debug(f"Node with most memory: {proxmox_node_with_most_free_memory}.")
+        self.proxmox_install_host = proxmox_node_with_most_free_memory
+        return proxmox_node_with_most_free_memory
 
     def getNetworkConfig(self):
         """Return cloudinit-friendly ipconfigN string for VM."""
@@ -211,20 +217,19 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
 
     def getTemplateVMId(self, template_name):
         """return VM ID of VM template."""
+        # TODO: simplify this logic.
+        logging.info(f"Looking for template: {template_name} on {self.proxmox_install_host}.")
         template_vms = {}
         for vm in self.getAllVMInfo().values():
-            if 'template' in vm and self.getAllVMInfo()[vm['vmid']]['node'] == self.getNodeName():
-                template_vms[vm['name']] = vm['vmid']
-                ## TODO: ADD template name to the logging call below.
-                logging.info(f"Found candidate template VM: {template_vms[vm['name']]}. ")
-        try:
-            template_id = template_vms[template_name]
-            logging.info(f"Found template VM ID: {template_id} for {template_name}.")
-        except KeyError:
-            logging.error(f"Did not find a template VM for {template_name} on node requested for install.")
-            sys.exit(1)
-        return template_id
-    
+            if self.getAllVMInfo()[vm['vmid']]['node'] == self.proxmox_install_host:
+                if template_name == vm['name']:
+                    logging.info(f"Found candidate template VM: {vm['name']}. ID: {vm['vmid']}.")
+                    return vm['vmid']
+
+        logging.error(f"Did not find a template VM for {template_name} on {self.proxmox_install_host} for install.")
+        sys.exit(1)
+
+   
     def getProxmoxStorage(self):
         """Return the storage name for storing virtual machine disks, and cloud-init disks."""
         return self.args.proxmox_storage
