@@ -215,15 +215,22 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
         return ipconfig
 
     def getTemplateVMId(self, template_name):
-        """return VM ID of VM template."""
-        # TODO: simplify this logic.
+        """Return VM ID of VM template to clone.
+        Iterate over all VMs, looking for the template of matching name
+        on the same host  that the VM is being installed on.
+        """
         logging.info(f"Looking for template: {template_name} on {self.proxmox_install_host}.")
         template_vms = {}
         for vm in self.getAllVMInfo().values():
-            if self.getAllVMInfo()[vm['vmid']]['node'] == self.proxmox_install_host:
-                if template_name == vm['name']:
-                    logging.info(f"Found candidate template VM: {vm['name']}. ID: {vm['vmid']}.")
-                    return vm['vmid']
+            proxmox_node_name = self.getAllVMInfo()[vm['vmid']]['node']
+            if proxmox_node_name != self.proxmox_install_host:
+                logging.info(f"Found a VM on {proxmox_node_name} but that's not where we're installing. Skipping.")
+                continue
+            if vm['name'] == template_name:
+               logging.info(f"Found candidate template VM: {vm['name']}. ID: {vm['vmid']}.")
+               return vm['vmid']
+            else:
+               logging.info(f"Found VM but it is not a matching template: {vm['name']}. ID: {vm['vmid']}.")
 
         logging.error(f"Did not find a template VM for {template_name} on {self.proxmox_install_host} for install.")
         sys.exit(1)
