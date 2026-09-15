@@ -24,7 +24,7 @@ class ProxmoxUbuntuCloud(vmtypes.BaseVM):
             self.args.cluster)
         self.proxmox = ProxmoxAPI(
             self.args.vm_host,
-            port=443,
+            port=self.args.proxmox_port,
             user=auth_params['user'],
             token_name=auth_params['token'],
             token_value=auth_params['secret'],
